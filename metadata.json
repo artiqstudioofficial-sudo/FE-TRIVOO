@@ -1,0 +1,7 @@
+{
+  "name": "Trivgoo Travel Platform",
+  "description": "A professional travel booking platform with Customer, Agent, and Admin portals, featuring AI trip planning.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
