@@ -3,9 +3,8 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../components/ToastContext';
+import { authService } from '../services/authService';
 import { AgentSpecialization, UserRole } from '../types';
-
-const API_BASE_URL = 'http://localhost:4000';
 
 const Login: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -19,7 +18,8 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, setUserFromApi } = useAuth();
+  // kita pakai setUserFromApi saja, login FE sekarang lewat authService langsung
+  const { setUserFromApi } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,7 +43,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      // REGISTER FLOW
+      // ===== REGISTER FLOW =====
       if (isRegistering) {
         const payload: any = {
           name,
@@ -56,47 +56,35 @@ const Login: React.FC = () => {
           payload.specialization = specialization;
         }
 
-        const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        const data = await authService.register(payload);
+        // data = { token, user }
 
-        const json = await res.json();
-
-        if (!res.ok || json.error) {
-          const msg = json.message || 'Registration failed. Email might already be in use.';
-          setError(msg);
-          showToast(msg, 'error');
-          return;
-        }
-
-        // Backend sudah balikin token + user, simpan ke auth context
-        setUserFromApi(json.data);
+        // simpan ke auth context
+        setUserFromApi(data);
         showToast('Account created! Welcome.', 'success');
 
-        const backendRole = json.data?.user?.role as UserRole | undefined;
+        const backendRole = data.user?.role as UserRole | undefined;
         handleRedirectByRole(backendRole);
         return;
       }
 
-      // LOGIN FLOW
-      const result = await login(email, password);
+      // ===== LOGIN FLOW =====
+      const data = await authService.login({ email, password });
+      // data = { token, user }
 
-      if (!result.success) {
-        const msg = result.message || 'Invalid credentials.';
-        setError(msg);
-        showToast(msg, 'error');
-        return;
-      }
-
+      setUserFromApi(data);
       showToast('Welcome back!', 'success');
 
-      const backendRole = result.user?.role;
+      const backendRole = data.user?.role as UserRole | undefined;
       handleRedirectByRole(backendRole);
     } catch (err: any) {
       console.error(err);
-      const msg = err?.message || 'Something went wrong';
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        (isRegistering
+          ? 'Registration failed. Email might already be in use.'
+          : 'Invalid credentials.');
       setError(msg);
       showToast(msg, 'error');
     } finally {

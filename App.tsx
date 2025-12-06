@@ -1,39 +1,37 @@
-
-
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
 import { ToastProvider } from './components/ToastContext';
 import { WishlistProvider } from './components/WishlistContext';
 import { UserRole } from './types';
 
 // Layouts
-import PublicLayout from './components/PublicLayout';
 import DashboardLayout from './components/DashboardLayout';
+import PublicLayout from './components/PublicLayout';
 
 // Public Pages
-import Home from './pages/Home';
-import Explore from './pages/Explore';
-import ProductDetail from './pages/ProductDetail';
-import Login from './pages/Login';
 import AITripPlanner from './pages/AITripPlanner';
+import Explore from './pages/Explore';
+import Home from './pages/Home';
+import Login from './pages/Login';
 import Payment from './pages/Payment';
+import ProductDetail from './pages/ProductDetail';
 import Wishlist from './pages/Wishlist';
 
 // Protected Pages
-import CustomerBookings from './pages/customer/Bookings';
+import AdminBookings from './pages/admin/Bookings';
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminPayouts from './pages/admin/Payouts';
+import AdminProducts from './pages/admin/Products';
+import AdminSettings from './pages/admin/Settings';
+import AdminUsers from './pages/admin/Users';
+import AgentAddProduct from './pages/agent/AddProduct';
+import AgentCommissions from './pages/agent/Commissions';
+import AgentCustomerBookings from './pages/agent/CustomerBookings';
 import AgentDashboard from './pages/agent/Dashboard';
 import AgentProducts from './pages/agent/MyProducts';
-import AgentAddProduct from './pages/agent/AddProduct';
-import AgentCustomerBookings from './pages/agent/CustomerBookings'; 
-import AgentCommissions from './pages/agent/Commissions'; 
-import AgentVerification from './pages/agent/Verification'; 
-import AdminDashboard from './pages/admin/Dashboard';
-import AdminBookings from './pages/admin/Bookings';
-import AdminPayouts from './pages/admin/Payouts'; 
-import AdminUsers from './pages/admin/Users';
-import AdminSettings from './pages/admin/Settings';
-import AdminProducts from './pages/admin/Products';
+import AgentVerification from './pages/agent/Verification';
+import CustomerBookings from './pages/customer/Bookings';
 
 // Route Guards
 interface ProtectedRouteProps {
@@ -73,27 +71,36 @@ const AppRoutes = () => {
         <Route path="/ai-planner" element={<AITripPlanner />} />
         <Route path="/login" element={<Login />} />
         <Route path="/wishlist" element={<Wishlist />} />
-        
-        {/* Customer Protected Route - Nested in Public Layout for consistency */}
-        <Route path="/payment" element={
-          <ProtectedRoute allowedRoles={[UserRole.CUSTOMER]}>
-            <Payment />
-          </ProtectedRoute>
-        } />
 
-        <Route path="/my-bookings" element={
-          <ProtectedRoute allowedRoles={[UserRole.CUSTOMER]}>
-            <CustomerBookings />
-          </ProtectedRoute>
-        } />
+        {/* Customer Protected Route - Nested in Public Layout for consistency */}
+        <Route
+          path="/payment"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.CUSTOMER]}>
+              <Payment />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-bookings"
+          element={
+            <ProtectedRoute allowedRoles={[UserRole.CUSTOMER]}>
+              <CustomerBookings />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* Dashboard Routes (Admin & Agent) */}
-      <Route path="/admin" element={
-        <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-          <DashboardLayout role={UserRole.ADMIN} />
-        </ProtectedRoute>
-      }>
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+            <DashboardLayout role={UserRole.ADMIN} />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<AdminDashboard />} />
         <Route path="bookings" element={<AdminBookings />} />
         <Route path="products" element={<AdminProducts />} />
@@ -102,11 +109,14 @@ const AppRoutes = () => {
         <Route path="settings" element={<AdminSettings />} />
       </Route>
 
-      <Route path="/agent" element={
-        <ProtectedRoute allowedRoles={[UserRole.AGENT]}>
-          <DashboardLayout role={UserRole.AGENT} />
-        </ProtectedRoute>
-      }>
+      <Route
+        path="/agent"
+        element={
+          <ProtectedRoute allowedRoles={[UserRole.AGENT]}>
+            <DashboardLayout role={UserRole.AGENT} />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<AgentDashboard />} />
         <Route path="products" element={<AgentProducts />} />
         <Route path="products/new" element={<AgentAddProduct />} />
@@ -115,7 +125,6 @@ const AppRoutes = () => {
         <Route path="commissions" element={<AgentCommissions />} />
         <Route path="verification" element={<AgentVerification />} />
       </Route>
-
     </Routes>
   );
 };

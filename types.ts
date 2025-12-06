@@ -1,10 +1,15 @@
 // Enums for Roles and Statuses
 export enum UserRole {
-  ADMIN = 'admin',
-  AGENT = 'agent',
-  CUSTOMER = 'customer',
+  ADMIN = 'ADMIN',
+  AGENT = 'AGENT',
+  CUSTOMER = 'CUSTOMER',
 }
 
+/**
+ * Untuk yang di bawah ini aku biarkan lowercase dulu,
+ * asumsi API kamu untuk booking/payment/payout masih pakai lowercase.
+ * Kalau nanti di API diubah ke uppercase, tinggal samain di sini.
+ */
 export enum BookingStatus {
   PENDING = 'pending',
   CONFIRMED = 'confirmed',
@@ -24,22 +29,31 @@ export enum PayoutStatus {
   REJECTED = 'rejected',
 }
 
+/**
+ * Ini yang penting: SESUAIKAN dengan kolom `users.verification_status`
+ * di DB yang sekarang pakai UPPERCASE (UNVERIFIED, PENDING, VERIFIED, REJECTED)
+ */
 export enum VerificationStatus {
-  UNVERIFIED = 'unverified',
-  PENDING = 'pending',
-  VERIFIED = 'verified',
-  REJECTED = 'rejected',
+  UNVERIFIED = 'UNVERIFIED',
+  PENDING = 'PENDING',
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED',
 }
 
+/**
+ * SESUAIKAN dengan API agent_verifications:
+ * - agent_type: 'INDIVIDUAL' | 'CORPORATE'
+ * - specialization: 'TOUR' | 'STAY' | 'TRANSPORT'
+ */
 export enum AgentType {
-  INDIVIDUAL = 'individual',
-  CORPORATE = 'corporate',
+  INDIVIDUAL = 'INDIVIDUAL',
+  CORPORATE = 'CORPORATE',
 }
 
 export enum AgentSpecialization {
-  TOUR = 'tour',
-  STAY = 'stay',
-  TRANSPORT = 'transport',
+  TOUR = 'TOUR',
+  STAY = 'STAY',
+  TRANSPORT = 'TRANSPORT',
 }
 
 // Sub-Categories Enums
@@ -158,10 +172,10 @@ export interface User {
   avatar?: string;
   balance?: number; // For agents (commission)
 
-  // Verification Fields
-  verificationStatus?: VerificationStatus;
-  agentType?: AgentType;
-  specialization?: AgentSpecialization;
+  // Verification Fields (disesuaikan dengan API sekarang)
+  verificationStatus?: VerificationStatus; // mapping dari verification_status
+  agentType?: AgentType | null; // opsional
+  specialization?: AgentSpecialization | null;
   documents?: {
     idCard?: string; // KTP/Passport
     taxId?: string; // NPWP
