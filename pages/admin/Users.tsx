@@ -1,23 +1,35 @@
+// src/pages/admin/UsersManagement.tsx
+
 import { CheckCircle, ShieldAlert, UserCheck, User as UserIcon, XCircle } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { mockService } from '../../services/mockService';
+import { adminService } from '../../services/adminService';
 import { User, VerificationStatus } from '../../types';
 
 const UsersManagement: React.FC = () => {
   const [agents, setAgents] = useState<User[]>([]);
   const [customers, setCustomers] = useState<User[]>([]);
   const [activeTab, setActiveTab] = useState<'agents' | 'customers'>('agents');
-  const [_, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
-    setIsLoading(true);
-    const [agentData, customerData] = await Promise.all([
-      mockService.getAllAgents(),
-      mockService.getAllCustomers(),
-    ]);
-    setAgents(agentData);
-    setCustomers(customerData);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const [agentData, customerData] = await Promise.all([
+        adminService.getAllAgents(),
+        adminService.getAllCustomers(),
+      ]);
+
+      setAgents(agentData);
+      setCustomers(customerData);
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || 'Failed to load users');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -25,12 +37,14 @@ const UsersManagement: React.FC = () => {
   }, []);
 
   const handleVerify = async (userId: number, action: 'approve' | 'reject') => {
-    if (action === 'approve') {
-      await mockService.approveAgent(userId);
-    } else {
-      await mockService.rejectAgent(userId);
+    try {
+      const apiAction = action === 'approve' ? 'APPROVE' : 'REJECT';
+      await adminService.updateAgentVerification(userId, apiAction);
+      await loadData();
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || 'Failed to update verification status');
     }
-    loadData();
   };
 
   const getVerificationBadge = (status?: VerificationStatus) => {
@@ -62,6 +76,11 @@ const UsersManagement: React.FC = () => {
     }
   };
 
+  const formatEnum = (val?: string) => {
+    if (!val) return '-';
+    return val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -70,6 +89,12 @@ const UsersManagement: React.FC = () => {
           <p className="text-gray-500 text-sm">Manage agents, customers, and verifications.</p>
         </div>
       </div>
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-4 py-2">
+          {error}
+        </p>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="border-b border-gray-100 px-6 pt-6">
@@ -100,7 +125,9 @@ const UsersManagement: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          {activeTab === 'agents' ? (
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-gray-500">Loading...</div>
+          ) : activeTab === 'agents' ? (
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
@@ -127,7 +154,17 @@ const UsersManagement: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
-                          <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                          {user.avatar ? (
+                            <img
+                              src={user.avatar}
+                              className="w-full h-full object-cover"
+                              alt={user.name}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                              {user.name?.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                         <div>
                           <div className="text-sm font-bold text-gray-900">{user.name}</div>
@@ -136,10 +173,10 @@ const UsersManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 capitalize">
-                      {user.agentType || '-'}
+                      {formatEnum(user.agentType)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600 capitalize">
-                      {user.specialization || '-'}
+                      {formatEnum(user.specialization)}
                     </td>
                     <td className="px-6 py-4">{getVerificationBadge(user.verificationStatus)}</td>
                     <td className="px-6 py-4 text-right">
@@ -187,7 +224,17 @@ const UsersManagement: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
-                          <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                          {user.avatar ? (
+                            <img
+                              src={user.avatar}
+                              className="w-full h-full object-cover"
+                              alt={user.name}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                              {user.name?.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                         <div className="text-sm font-bold text-gray-900">{user.name}</div>
                       </div>

@@ -1,10 +1,35 @@
-
-import React, { useState, useEffect } from 'react';
+import {
+  ArrowLeft,
+  BedDouble,
+  Calendar,
+  Check,
+  Coffee,
+  List,
+  MapPin,
+  Plus,
+  ShieldAlert,
+  Trash,
+  Upload,
+  User,
+  X,
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { mockService } from '../../services/mockService';
-import { Category, ProductDetails, ItineraryDay, VerificationStatus, AgentSpecialization, TourCategory, StayCategory, TransportCategory } from '../../types';
 import { useAuth } from '../../AuthContext';
-import { Upload, ArrowLeft, Check, Plus, Trash, Calendar, X, MapPin, List, Briefcase, User, Fuel, ShieldAlert, Palmtree, Building2, Car, Mountain, Tent, Heart, Coffee, Home, BedDouble, Plane, Utensils, Settings } from 'lucide-react';
+import {
+  AgentProduct,
+  AgentProductPayload,
+  agentProductService,
+} from '../../services/agentProductService';
+import {
+  AgentSpecialization,
+  ItineraryDay,
+  ProductDetails,
+  StayCategory,
+  TourCategory,
+  TransportCategory,
+  VerificationStatus,
+} from '../../types';
 
 const AgentAddProduct: React.FC = () => {
   const navigate = useNavigate();
@@ -23,7 +48,7 @@ const AgentAddProduct: React.FC = () => {
     image: '',
     features: [''],
     dailyCapacity: 10,
-    blockedDates: [] as string[]
+    blockedDates: [] as string[],
   });
 
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
@@ -31,211 +56,261 @@ const AgentAddProduct: React.FC = () => {
 
   // --- SERVICE SPECIFIC STATE ---
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
-  
+
   // Tour
-  const [tourDetails, setTourDetails] = useState({ 
-      duration: '', 
-      groupSize: '', 
-      difficulty: 'Easy' as 'Easy'|'Moderate'|'Hard',
-      ageRestriction: '',
-      meetingPoint: '',
-      inclusions: [''],
-      exclusions: ['']
+  const [tourDetails, setTourDetails] = useState({
+    duration: '',
+    groupSize: '',
+    difficulty: 'Easy' as 'Easy' | 'Moderate' | 'Hard',
+    ageRestriction: '',
+    meetingPoint: '',
+    inclusions: [''],
+    exclusions: [''],
   });
   const [itineraryItems, setItineraryItems] = useState<ItineraryDay[]>([]);
-  const [newDay, setNewDay] = useState<ItineraryDay>({ day: 1, title: '', description: '', meals: [], accommodation: '' });
+  const [newDay, setNewDay] = useState<ItineraryDay>({
+    day: 1,
+    title: '',
+    description: '',
+    meals: [],
+    accommodation: '',
+  });
 
   // Stay
-  const [stayDetails, setStayDetails] = useState({ 
-      rooms: 1, 
-      bathrooms: 1, 
-      beds: 1,
-      breakfastIncluded: false,
-      amenities: ['']
+  const [stayDetails, setStayDetails] = useState({
+    rooms: 1,
+    bathrooms: 1,
+    beds: 1,
+    breakfastIncluded: false,
+    amenities: [''],
   });
 
   // Transport
-  const [carDetails, setCarDetails] = useState({ 
-      seats: 4, 
-      transmission: 'Automatic', 
-      luggage: 2, 
-      fuelPolicy: 'Full to Full',
-      year: new Date().getFullYear(),
-      driver: false
+  const [carDetails, setCarDetails] = useState({
+    seats: 4,
+    transmission: 'Automatic',
+    luggage: 2,
+    fuelPolicy: 'Full to Full',
+    year: new Date().getFullYear(),
+    driver: false,
   });
 
   // Initialization & Edit Mode Logic
   useEffect(() => {
     // 1. Set default specialization if new
     if (!id && user?.specialization) {
-        if (user.specialization === AgentSpecialization.TOUR) setSelectedSubCategory(TourCategory.NATURE);
-        if (user.specialization === AgentSpecialization.STAY) setSelectedSubCategory(StayCategory.HOTEL);
-        if (user.specialization === AgentSpecialization.TRANSPORT) setSelectedSubCategory(TransportCategory.CAR_RENTAL);
+      if (user.specialization === AgentSpecialization.TOUR) {
+        setSelectedSubCategory(TourCategory.NATURE);
+      }
+      if (user.specialization === AgentSpecialization.STAY) {
+        setSelectedSubCategory(StayCategory.HOTEL);
+      }
+      if (user.specialization === AgentSpecialization.TRANSPORT) {
+        setSelectedSubCategory(TransportCategory.CAR_RENTAL);
+      }
     }
 
     // 2. Load Product if Edit Mode
     if (id) {
-        setIsEditMode(true);
-        mockService.getProductById(Number(id)).then(product => {
-            if (product && product.ownerId === user?.id) {
-                // Populate General Fields
-                setFormData({
-                    name: product.name,
-                    description: product.description,
-                    price: product.price.toString(),
-                    currency: product.currency,
-                    location: product.location,
-                    image: product.image,
-                    features: product.features,
-                    dailyCapacity: product.dailyCapacity || 10,
-                    blockedDates: product.blockedDates || []
-                });
-                setGalleryImages(product.images || []);
+      setIsEditMode(true);
+      (async () => {
+        try {
+          const product: AgentProduct = await agentProductService.getMyProduct(Number(id));
+          if (product && product.ownerId === user?.id) {
+            // Populate General Fields
+            setFormData({
+              name: product.name,
+              description: product.description,
+              price: product.price.toString(),
+              currency: product.currency,
+              location: product.location,
+              image: product.image,
+              features: product.features || [''],
+              dailyCapacity: product.dailyCapacity || 10,
+              blockedDates: product.blockedDates || [],
+            });
+            setGalleryImages(product.images || []);
 
-                // Populate Details
-                if (product.details) {
-                    if (product.details.type === 'tour') {
-                        setSelectedSubCategory(product.details.tourCategory);
-                        setTourDetails({
-                            duration: product.details.duration,
-                            groupSize: product.details.groupSize,
-                            difficulty: product.details.difficulty,
-                            ageRestriction: product.details.ageRestriction || '',
-                            meetingPoint: product.details.meetingPoint,
-                            inclusions: product.details.inclusions,
-                            exclusions: product.details.exclusions
-                        });
-                        setItineraryItems(product.details.itinerary);
-                    } else if (product.details.type === 'stay') {
-                        setSelectedSubCategory(product.details.stayCategory);
-                        setStayDetails({
-                            rooms: product.details.rooms,
-                            bathrooms: product.details.bathrooms,
-                            beds: product.details.beds,
-                            breakfastIncluded: product.details.breakfastIncluded,
-                            amenities: product.details.amenities[0]?.items || []
-                        });
-                    } else if (product.details.type === 'car') {
-                        setSelectedSubCategory(product.details.transportCategory);
-                        setCarDetails({
-                            seats: product.details.seats,
-                            transmission: product.details.transmission,
-                            luggage: product.details.luggage,
-                            fuelPolicy: product.details.fuelPolicy,
-                            year: product.details.year || new Date().getFullYear(),
-                            driver: product.details.driver || false
-                        });
-                    }
-                }
-            } else {
-                // Not found or not owner
-                navigate('/agent/products');
+            // Populate Details
+            if (product.details) {
+              if (product.details.type === 'tour') {
+                setSelectedSubCategory(product.details.tourCategory);
+                setTourDetails({
+                  duration: product.details.duration,
+                  groupSize: product.details.groupSize,
+                  difficulty: product.details.difficulty,
+                  ageRestriction: product.details.ageRestriction || '',
+                  meetingPoint: product.details.meetingPoint,
+                  inclusions: product.details.inclusions,
+                  exclusions: product.details.exclusions,
+                });
+                setItineraryItems(product.details.itinerary);
+              } else if (product.details.type === 'stay') {
+                setSelectedSubCategory(product.details.stayCategory);
+                setStayDetails({
+                  rooms: product.details.rooms,
+                  bathrooms: product.details.bathrooms,
+                  beds: product.details.beds,
+                  breakfastIncluded: product.details.breakfastIncluded,
+                  amenities: product.details.amenities[0]?.items || [''],
+                });
+              } else if (product.details.type === 'car') {
+                setSelectedSubCategory(product.details.transportCategory);
+                setCarDetails({
+                  seats: product.details.seats,
+                  transmission: product.details.transmission,
+                  luggage: product.details.luggage,
+                  fuelPolicy: product.details.fuelPolicy,
+                  year: product.details.year || new Date().getFullYear(),
+                  driver: product.details.driver || false,
+                });
+              }
             }
-        });
+          } else {
+            // Not found or not owner
+            navigate('/agent/products');
+          }
+        } catch (err) {
+          console.error(err);
+          navigate('/agent/products');
+        }
+      })();
     }
   }, [id, user, navigate]);
 
   // If not verified, show block message
   if (user?.verificationStatus !== VerificationStatus.VERIFIED) {
-      return (
-          <div className="max-w-2xl mx-auto py-20 text-center">
-              <div className="bg-amber-50 rounded-3xl p-10 border border-amber-100">
-                  <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <ShieldAlert className="w-10 h-10" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Verification Required</h2>
-                  <p className="text-gray-600 mb-8">You must complete the agent verification process and be approved by an admin before you can add products.</p>
-                  <button onClick={() => navigate('/agent/verification')} className="px-8 py-3 bg-amber-600 text-white rounded-xl font-bold shadow-lg hover:bg-amber-700 transition-colors">
-                      Go to Verification
-                  </button>
-              </div>
+    return (
+      <div className="max-w-2xl mx-auto py-20 text-center">
+        <div className="bg-amber-50 rounded-3xl p-10 border border-amber-100">
+          <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShieldAlert className="w-10 h-10" />
           </div>
-      );
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Verification Required</h2>
+          <p className="text-gray-600 mb-8">
+            You must complete the agent verification process and be approved by an admin before you
+            can add products.
+          </p>
+          <button
+            onClick={() => navigate('/agent/verification')}
+            className="px-8 py-3 bg-amber-600 text-white rounded-xl font-bold shadow-lg hover:bg-amber-700 transition-colors"
+          >
+            Go to Verification
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFeatureChange = (index: number, value: string) => {
     const newFeatures = [...formData.features];
     newFeatures[index] = value;
-    setFormData(prev => ({ ...prev, features: newFeatures }));
+    setFormData((prev) => ({ ...prev, features: newFeatures }));
   };
 
   const addFeature = () => {
-    setFormData(prev => ({ ...prev, features: [...prev.features, ''] }));
+    setFormData((prev) => ({ ...prev, features: [...prev.features, ''] }));
   };
 
   const removeFeature = (index: number) => {
     const newFeatures = formData.features.filter((_, i) => i !== index);
-    setFormData(prev => ({ ...prev, features: newFeatures }));
+    setFormData((prev) => ({ ...prev, features: newFeatures }));
   };
 
   // Helper for dynamic lists (inclusions, exclusions, amenities)
   const handleListChange = (setter: any, list: string[], index: number, value: string) => {
-      const updated = [...list];
-      updated[index] = value;
-      setter((prev: any) => ({ ...prev, [setter === setTourDetails ? (list === tourDetails.inclusions ? 'inclusions' : 'exclusions') : 'amenities']: updated }));
+    const updated = [...list];
+    updated[index] = value;
+    setter((prev: any) => ({
+      ...prev,
+      [setter === setTourDetails
+        ? list === tourDetails.inclusions
+          ? 'inclusions'
+          : 'exclusions'
+        : 'amenities']: updated,
+    }));
   };
-  
+
   const addListItem = (setter: any, list: string[], field: string) => {
-      setter((prev: any) => ({ ...prev, [field]: [...list, ''] }));
+    setter((prev: any) => ({ ...prev, [field]: [...list, ''] }));
   };
 
   const removeListItem = (setter: any, list: string[], field: string, index: number) => {
-      setter((prev: any) => ({ ...prev, [field]: list.filter((_, i) => i !== index) }));
+    setter((prev: any) => ({
+      ...prev,
+      [field]: list.filter((_, i) => i !== index),
+    }));
   };
 
   // Itinerary Logic
   const addItineraryDay = () => {
-      if (!newDay.title || !newDay.description) return;
-      setItineraryItems(prev => [...prev, { ...newDay, day: prev.length + 1 }]);
-      setNewDay({ day: itineraryItems.length + 2, title: '', description: '', meals: [], accommodation: '' });
+    if (!newDay.title || !newDay.description) return;
+    setItineraryItems((prev) => [...prev, { ...newDay, day: prev.length + 1 }]);
+    setNewDay({
+      day: itineraryItems.length + 2,
+      title: '',
+      description: '',
+      meals: [],
+      accommodation: '',
+    });
   };
 
   const removeItineraryDay = (index: number) => {
-      const updated = itineraryItems.filter((_, i) => i !== index).map((item, i) => ({ ...item, day: i + 1 }));
-      setItineraryItems(updated);
-      setNewDay(prev => ({ ...prev, day: updated.length + 1 }));
+    const updated = itineraryItems
+      .filter((_, i) => i !== index)
+      .map((item, i) => ({ ...item, day: i + 1 }));
+    setItineraryItems(updated);
+    setNewDay((prev) => ({ ...prev, day: updated.length + 1 }));
   };
 
   const toggleMeal = (meal: string) => {
-      setNewDay(prev => {
-          const currentMeals = prev.meals || [];
-          if (currentMeals.includes(meal)) {
-              return { ...prev, meals: currentMeals.filter(m => m !== meal) };
-          } else {
-              return { ...prev, meals: [...currentMeals, meal] };
-          }
-      });
+    setNewDay((prev) => {
+      const currentMeals = prev.meals || [];
+      if (currentMeals.includes(meal)) {
+        return { ...prev, meals: currentMeals.filter((m) => m !== meal) };
+      } else {
+        return { ...prev, meals: [...currentMeals, meal] };
+      }
+    });
   };
 
   const handleAddBlockedDate = () => {
     if (newBlockedDate && !formData.blockedDates.includes(newBlockedDate)) {
-        setFormData(prev => ({ ...prev, blockedDates: [...prev.blockedDates, newBlockedDate] }));
-        setNewBlockedDate('');
+      setFormData((prev) => ({
+        ...prev,
+        blockedDates: [...prev.blockedDates, newBlockedDate],
+      }));
+      setNewBlockedDate('');
     }
   };
 
   const removeBlockedDate = (date: string) => {
-    setFormData(prev => ({ ...prev, blockedDates: prev.blockedDates.filter(d => d !== date) }));
+    setFormData((prev) => ({
+      ...prev,
+      blockedDates: prev.blockedDates.filter((d) => d !== date),
+    }));
   };
 
   const handleImageUploadSim = (type: 'cover' | 'gallery') => {
-      const demoImages = [
-          'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80',
-          'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=800&q=80',
-          'https://images.unsplash.com/photo-1512100356356-de1b84283e18?auto=format&fit=crop&w=800&q=80',
-          'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=800&q=80'
-      ];
-      const randomImg = demoImages[Math.floor(Math.random() * demoImages.length)];
-      if (type === 'cover') {
-          setFormData(prev => ({ ...prev, image: randomImg }));
-      } else {
-          setGalleryImages(prev => [...prev, randomImg]);
-      }
+    const demoImages = [
+      'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1512100356356-de1b84283e18?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=800&q=80',
+    ];
+    const randomImg = demoImages[Math.floor(Math.random() * demoImages.length)];
+    if (type === 'cover') {
+      setFormData((prev) => ({ ...prev, image: randomImg }));
+    } else {
+      setGalleryImages((prev) => [...prev, randomImg]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -244,76 +319,81 @@ const AgentAddProduct: React.FC = () => {
     setIsSubmitting(true);
 
     let finalDetails: ProductDetails | undefined;
-    
-    // Determine category ID based on specialization (legacy mock support)
+
+    // Determine category ID based on specialization
     let categoryId = 1;
     if (user.specialization === AgentSpecialization.STAY) categoryId = 2;
     if (user.specialization === AgentSpecialization.TRANSPORT) categoryId = 4;
 
     if (user.specialization === AgentSpecialization.TOUR) {
-        finalDetails = {
-            type: 'tour',
-            tourCategory: selectedSubCategory as TourCategory,
-            duration: tourDetails.duration || '1 Day',
-            groupSize: tourDetails.groupSize || 'Flexible',
-            difficulty: tourDetails.difficulty,
-            meetingPoint: tourDetails.meetingPoint,
-            ageRestriction: tourDetails.ageRestriction,
-            itinerary: itineraryItems, 
-            inclusions: tourDetails.inclusions.filter(i => i),
-            exclusions: tourDetails.exclusions.filter(i => i)
-        };
+      finalDetails = {
+        type: 'tour',
+        tourCategory: selectedSubCategory as TourCategory,
+        duration: tourDetails.duration || '1 Day',
+        groupSize: tourDetails.groupSize || 'Flexible',
+        difficulty: tourDetails.difficulty,
+        meetingPoint: tourDetails.meetingPoint,
+        ageRestriction: tourDetails.ageRestriction,
+        itinerary: itineraryItems,
+        inclusions: tourDetails.inclusions.filter((i) => i),
+        exclusions: tourDetails.exclusions.filter((i) => i),
+      };
     } else if (user.specialization === AgentSpecialization.STAY) {
-        finalDetails = {
-            type: 'stay',
-            stayCategory: selectedSubCategory as StayCategory,
-            checkIn: '14:00',
-            checkOut: '11:00',
-            rooms: Number(stayDetails.rooms),
-            bathrooms: Number(stayDetails.bathrooms),
-            beds: Number(stayDetails.beds),
-            breakfastIncluded: stayDetails.breakfastIncluded,
-            amenities: [{ category: 'General', items: stayDetails.amenities.filter(i => i) }],
-            rules: []
-        };
+      finalDetails = {
+        type: 'stay',
+        stayCategory: selectedSubCategory as StayCategory,
+        checkIn: '14:00',
+        checkOut: '11:00',
+        rooms: Number(stayDetails.rooms),
+        bathrooms: Number(stayDetails.bathrooms),
+        beds: Number(stayDetails.beds),
+        breakfastIncluded: stayDetails.breakfastIncluded,
+        amenities: [{ category: 'General', items: stayDetails.amenities.filter((i) => i) }],
+        rules: [],
+      };
     } else if (user.specialization === AgentSpecialization.TRANSPORT) {
-        finalDetails = {
-            type: 'car',
-            transportCategory: selectedSubCategory as TransportCategory,
-            transmission: carDetails.transmission as 'Automatic' | 'Manual',
-            seats: Number(carDetails.seats),
-            luggage: Number(carDetails.luggage),
-            fuelPolicy: carDetails.fuelPolicy,
-            driver: carDetails.driver,
-            year: Number(carDetails.year),
-            requirements: []
-        };
+      finalDetails = {
+        type: 'car',
+        transportCategory: selectedSubCategory as TransportCategory,
+        transmission: carDetails.transmission as 'Automatic' | 'Manual',
+        seats: Number(carDetails.seats),
+        luggage: Number(carDetails.luggage),
+        fuelPolicy: carDetails.fuelPolicy,
+        driver: carDetails.driver,
+        year: Number(carDetails.year),
+        requirements: [],
+      };
     }
 
-    const payload = {
-        ownerId: user.id, 
-        categoryId: categoryId,
-        name: formData.name,
-        description: formData.description,
-        price: Number(formData.price),
-        currency: formData.currency,
-        location: formData.location,
-        image: formData.image || 'https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=800&q=80',
-        images: galleryImages,
-        features: formData.features.filter(f => f.trim() !== ''),
-        details: finalDetails,
-        dailyCapacity: Number(formData.dailyCapacity),
-        blockedDates: formData.blockedDates
+    const payload: AgentProductPayload = {
+      categoryId,
+      name: formData.name,
+      description: formData.description,
+      price: Number(formData.price),
+      currency: formData.currency,
+      location: formData.location,
+      image:
+        formData.image ||
+        'https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=800&q=80',
+      images: galleryImages,
+      features: formData.features.filter((f) => f.trim() !== ''),
+      details: finalDetails,
+      dailyCapacity: Number(formData.dailyCapacity),
+      blockedDates: formData.blockedDates,
     };
 
-    if (isEditMode && id) {
-        await mockService.updateProduct(Number(id), payload);
-    } else {
-        await mockService.addProduct(payload);
+    try {
+      if (isEditMode && id) {
+        await agentProductService.updateProduct(Number(id), payload);
+      } else {
+        await agentProductService.createProduct(payload);
+      }
+      navigate('/agent/products');
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
-    navigate('/agent/products');
   };
 
   const isTour = user?.specialization === AgentSpecialization.TOUR;
@@ -322,380 +402,705 @@ const AgentAddProduct: React.FC = () => {
 
   // Render Logic for Sub-Categories
   const renderSubCategories = () => {
-      const options = isTour ? Object.values(TourCategory) : isStay ? Object.values(StayCategory) : Object.values(TransportCategory);
-      return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              {options.map(opt => (
-                  <div 
-                    key={opt}
-                    onClick={() => setSelectedSubCategory(opt)}
-                    className={`cursor-pointer p-4 rounded-xl border-2 flex items-center justify-center text-center font-bold text-sm transition-all ${selectedSubCategory === opt ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-100 hover:border-gray-200 text-gray-600'}`}
-                  >
-                      {opt}
-                  </div>
-              ))}
+    const options = isTour
+      ? Object.values(TourCategory)
+      : isStay
+      ? Object.values(StayCategory)
+      : Object.values(TransportCategory);
+
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {options.map((opt) => (
+          <div
+            key={opt}
+            onClick={() => setSelectedSubCategory(opt)}
+            className={`cursor-pointer p-4 rounded-xl border-2 flex items-center justify-center text-center font-bold text-sm transition-all ${
+              selectedSubCategory === opt
+                ? 'border-primary-500 bg-primary-50 text-primary-700'
+                : 'border-gray-100 hover:border-gray-200 text-gray-600'
+            }`}
+          >
+            {opt}
           </div>
-      );
+        ))}
+      </div>
+    );
   };
 
   return (
     <div className="max-w-6xl mx-auto pb-20">
       {/* Header */}
       <div className="flex items-center mb-8 sticky top-0 bg-gray-50 z-20 py-4">
-        <button onClick={() => navigate('/agent/products')} className="mr-4 p-2 hover:bg-gray-200 rounded-full transition-colors bg-white shadow-sm border border-gray-200">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+        <button
+          onClick={() => navigate('/agent/products')}
+          className="mr-4 p-2 hover:bg-gray-200 rounded-full transition-colors bg-white shadow-sm border border-gray-200"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div>
-            <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Product' : 'Add New Service'}</h1>
-            <p className="text-sm text-gray-500">{isEditMode ? 'Update your listing details.' : 'Create a compelling listing for your customers.'}</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isEditMode ? 'Edit Product' : 'Add New Service'}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {isEditMode
+              ? 'Update your listing details.'
+              : 'Create a compelling listing for your customers.'}
+          </p>
         </div>
         <div className="ml-auto">
-            <button 
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="px-6 py-2.5 bg-primary-600 text-white rounded-xl font-bold shadow-lg hover:bg-primary-700 transition-all disabled:opacity-70 flex items-center"
-            >
-                {isSubmitting ? (
-                    <span className="flex items-center"><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div> Saving...</span>
-                ) : (
-                    <>Save Changes <Check className="w-4 h-4 ml-2" /></>
-                )}
-            </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-6 py-2.5 bg-primary-600 text-white rounded-xl font-bold shadow-lg hover:bg-primary-700 transition-all disabled:opacity-70 flex items-center"
+          >
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                Saving...
+              </span>
+            ) : (
+              <>
+                Save Changes <Check className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
         {/* LEFT COLUMN - MAIN FORM */}
         <div className="lg:col-span-2 space-y-8">
-            
-            {/* 1. Category & Basic Info */}
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <span className="w-8 h-8 rounded-lg bg-primary-100 text-primary-600 flex items-center justify-center mr-3 text-sm">1</span>
-                    Category & Basics
-                </h3>
-                
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Service Type</label>
-                {renderSubCategories()}
+          {/* 1. Category & Basic Info */}
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <span className="w-8 h-8 rounded-lg bg-primary-100 text-primary-600 flex items-center justify-center mr-3 text-sm">
+                1
+              </span>
+              Category & Basics
+            </h3>
 
-                <div className="grid grid-cols-1 gap-6">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Listing Title</label>
-                        <input 
-                            type="text" 
-                            name="name"
-                            required
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white font-medium"
-                            placeholder="e.g. 3D2N Nusa Penida Adventure"
-                            value={formData.name}
-                            onChange={handleChange}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Location</label>
-                        <div className="relative">
-                            <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                            <input 
-                                type="text" 
-                                name="location"
-                                required
-                                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white"
-                                placeholder="e.g. Ubud, Bali"
-                                value={formData.location}
-                                onChange={handleChange}
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Description</label>
-                        <textarea 
-                            name="description"
-                            required
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white h-32 resize-none"
-                            placeholder="Describe what makes this special..."
-                            value={formData.description}
-                            onChange={handleChange}
-                        ></textarea>
-                    </div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+              Service Type
+            </label>
+            {renderSubCategories()}
+
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Listing Title
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white font-medium"
+                  placeholder="e.g. 3D2N Nusa Penida Adventure"
+                  value={formData.name}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Location
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    name="location"
+                    required
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white"
+                    placeholder="e.g. Ubud, Bali"
+                    value={formData.location}
+                    onChange={handleChange}
+                  />
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white h-32 resize-none"
+                  placeholder="Describe what makes this special..."
+                  value={formData.description}
+                  onChange={handleChange}
+                ></textarea>
+              </div>
             </div>
+          </div>
 
-            {/* 2. Specific Details (Dynamic based on specialization) */}
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                    <span className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-sm">2</span>
-                    {isTour ? 'Tour Specifics' : isStay ? 'Property Details' : 'Vehicle Specs'}
-                </h3>
+          {/* 2. Specific Details (Dynamic based on specialization) */}
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+              <span className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3 text-sm">
+                2
+              </span>
+              {isTour ? 'Tour Specifics' : isStay ? 'Property Details' : 'Vehicle Specs'}
+            </h3>
 
-                {/* TOUR FORM */}
-                {isTour && (
-                    <div className="space-y-6 animate-in fade-in">
-                        <div className="grid grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Duration</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
-                                    placeholder="e.g. 3 Days"
-                                    value={tourDetails.duration}
-                                    onChange={(e) => setTourDetails({...tourDetails, duration: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Group Size</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
-                                    placeholder="e.g. Max 10"
-                                    value={tourDetails.groupSize}
-                                    onChange={(e) => setTourDetails({...tourDetails, groupSize: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Difficulty</label>
-                                <select 
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
-                                    value={tourDetails.difficulty}
-                                    onChange={(e) => setTourDetails({...tourDetails, difficulty: e.target.value as any})}
-                                >
-                                    <option>Easy</option>
-                                    <option>Moderate</option>
-                                    <option>Hard</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Meeting Point</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
-                                    placeholder="e.g. Hotel Lobby"
-                                    value={tourDetails.meetingPoint}
-                                    onChange={(e) => setTourDetails({...tourDetails, meetingPoint: e.target.value})}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Itinerary Builder */}
-                        <div className="border-t border-gray-100 pt-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-4 flex items-center">
-                                <List className="w-4 h-4 mr-2 text-primary-500" /> Itinerary
-                            </label>
-                            <div className="space-y-3 mb-4">
-                                {itineraryItems.map((item, idx) => (
-                                    <div key={idx} className="flex items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                        <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold mr-3 border border-gray-200">
-                                            {item.day}
-                                        </div>
-                                        <div className="flex-1 text-sm font-medium">
-                                            <span className="font-bold">{item.title}</span>
-                                            {item.accommodation && <span className="text-xs text-gray-500 block">Stay: {item.accommodation}</span>}
-                                        </div>
-                                        <button onClick={() => removeItineraryDay(idx)} className="text-red-400 hover:text-red-600"><Trash className="w-4 h-4" /></button>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="bg-primary-50 p-4 rounded-xl border border-primary-100">
-                                <h5 className="text-xs font-bold text-primary-700 uppercase tracking-wide mb-3">Day {itineraryItems.length + 1}</h5>
-                                <input 
-                                    type="text"
-                                    placeholder="Title (e.g. Island Hopping)"
-                                    className="w-full px-4 py-2 rounded-lg border border-gray-200 mb-2 text-sm"
-                                    value={newDay.title}
-                                    onChange={(e) => setNewDay({...newDay, title: e.target.value})}
-                                />
-                                <textarea 
-                                    placeholder="Activity details..."
-                                    className="w-full px-4 py-2 rounded-lg border border-gray-200 mb-3 text-sm h-16 resize-none"
-                                    value={newDay.description}
-                                    onChange={(e) => setNewDay({...newDay, description: e.target.value})}
-                                ></textarea>
-                                
-                                <div className="mb-3">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Accommodation</label>
-                                    <div className="relative">
-                                        <BedDouble className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                        <input 
-                                            type="text"
-                                            placeholder="e.g. Hilton Garden Inn"
-                                            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm"
-                                            value={newDay.accommodation || ''}
-                                            onChange={(e) => setNewDay({...newDay, accommodation: e.target.value})}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="mb-4">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Meals Included</label>
-                                    <div className="flex gap-2">
-                                        {['Breakfast', 'Lunch', 'Dinner'].map(meal => (
-                                            <button 
-                                                key={meal}
-                                                type="button"
-                                                onClick={() => toggleMeal(meal)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${newDay.meals?.includes(meal) ? 'bg-orange-100 border-orange-200 text-orange-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
-                                            >
-                                                {meal}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <button type="button" onClick={addItineraryDay} className="w-full py-2 bg-primary-600 text-white rounded-lg text-sm font-bold hover:bg-primary-700">Add to Itinerary</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* STAY FORM */}
-                {isStay && (
-                    <div className="space-y-6 animate-in fade-in">
-                        <div className="grid grid-cols-3 gap-6">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Bedrooms</label>
-                                <input type="number" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white" value={stayDetails.rooms} onChange={(e) => setStayDetails({...stayDetails, rooms: parseInt(e.target.value)})} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Bathrooms</label>
-                                <input type="number" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white" value={stayDetails.bathrooms} onChange={(e) => setStayDetails({...stayDetails, bathrooms: parseInt(e.target.value)})} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Beds</label>
-                                <input type="number" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white" value={stayDetails.beds} onChange={(e) => setStayDetails({...stayDetails, beds: parseInt(e.target.value)})} />
-                            </div>
-                        </div>
-                        <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <input type="checkbox" id="bf" className="w-5 h-5 text-primary-600 rounded" checked={stayDetails.breakfastIncluded} onChange={(e) => setStayDetails({...stayDetails, breakfastIncluded: e.target.checked})} />
-                            <label htmlFor="bf" className="ml-3 text-sm font-bold text-gray-700 flex items-center"><Coffee className="w-4 h-4 mr-2" /> Breakfast Included</label>
-                        </div>
-                        
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Amenities</label>
-                            {stayDetails.amenities.map((item, idx) => (
-                                <div key={idx} className="flex gap-2 mb-2">
-                                    <input type="text" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="e.g. Private Pool" value={item} onChange={(e) => handleListChange(setStayDetails, stayDetails.amenities, idx, e.target.value)} />
-                                    <button type="button" onClick={() => removeListItem(setStayDetails, stayDetails.amenities, 'amenities', idx)} className="text-gray-300 hover:text-red-500"><Trash className="w-4 h-4" /></button>
-                                </div>
-                            ))}
-                            <button type="button" onClick={() => addListItem(setStayDetails, stayDetails.amenities, 'amenities')} className="text-primary-600 text-xs font-bold hover:underline">+ Add Amenity</button>
-                        </div>
-                    </div>
-                )}
-
-                {/* TRANSPORT FORM */}
-                {isTransport && (
-                    <div className="space-y-6 animate-in fade-in">
-                        <div className="grid grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vehicle Year</label>
-                                <input type="number" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white" value={carDetails.year} onChange={(e) => setCarDetails({...carDetails, year: parseInt(e.target.value)})} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Transmission</label>
-                                <select className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white" value={carDetails.transmission} onChange={(e) => setCarDetails({...carDetails, transmission: e.target.value})}>
-                                    <option>Automatic</option>
-                                    <option>Manual</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Seats</label>
-                                <input type="number" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white" value={carDetails.seats} onChange={(e) => setCarDetails({...carDetails, seats: parseInt(e.target.value)})} />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Luggage</label>
-                                <input type="number" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white" value={carDetails.luggage} onChange={(e) => setCarDetails({...carDetails, luggage: parseInt(e.target.value)})} />
-                            </div>
-                        </div>
-                        <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-                            <input type="checkbox" id="driver" className="w-5 h-5 text-primary-600 rounded" checked={carDetails.driver} onChange={(e) => setCarDetails({...carDetails, driver: e.target.checked})} />
-                            <label htmlFor="driver" className="ml-3 text-sm font-bold text-gray-700 flex items-center"><User className="w-4 h-4 mr-2" /> Driver Included</label>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* 3. Pricing & Availability */}
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                    <span className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mr-3 text-sm">3</span>
-                    Pricing & Availability
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Price ({formData.currency})</label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-bold">$</span>
-                            <input 
-                                type="number" 
-                                name="price"
-                                required
-                                className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white font-bold text-lg"
-                                placeholder="0.00"
-                                value={formData.price}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2">Per {isTour ? 'person' : isStay ? 'night' : 'day'}</p>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Daily {isTour ? 'Pax' : 'Unit'} Capacity</label>
-                        <input 
-                            type="number" 
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
-                            value={formData.dailyCapacity}
-                            onChange={(e) => setFormData({...formData, dailyCapacity: parseInt(e.target.value)})}
-                        />
-                    </div>
-                    <div className="col-span-2">
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Block Dates</label>
-                        <div className="flex gap-2 mb-3">
-                            <input type="date" className="flex-1 px-4 py-2 rounded-xl border border-gray-200" value={newBlockedDate} onChange={(e) => setNewBlockedDate(e.target.value)} />
-                            <button type="button" onClick={handleAddBlockedDate} className="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold">Block</button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {formData.blockedDates.map(date => (
-                                <div key={date} className="flex items-center px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-bold border border-red-100">
-                                    <Calendar className="w-3 h-3 mr-1" /> {date} <button type="button" onClick={() => removeBlockedDate(date)} className="ml-2 hover:bg-red-200 rounded-full"><X className="w-3 h-3" /></button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+            {/* TOUR FORM */}
+            {isTour && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Duration
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      placeholder="e.g. 3 Days"
+                      value={tourDetails.duration}
+                      onChange={(e) => setTourDetails({ ...tourDetails, duration: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Group Size
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      placeholder="e.g. Max 10"
+                      value={tourDetails.groupSize}
+                      onChange={(e) =>
+                        setTourDetails({ ...tourDetails, groupSize: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Difficulty
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={tourDetails.difficulty}
+                      onChange={(e) =>
+                        setTourDetails({
+                          ...tourDetails,
+                          difficulty: e.target.value as any,
+                        })
+                      }
+                    >
+                      <option>Easy</option>
+                      <option>Moderate</option>
+                      <option>Hard</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Meeting Point
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      placeholder="e.g. Hotel Lobby"
+                      value={tourDetails.meetingPoint}
+                      onChange={(e) =>
+                        setTourDetails({
+                          ...tourDetails,
+                          meetingPoint: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
+
+                {/* Itinerary Builder */}
+                <div className="border-t border-gray-100 pt-6">
+                  <label className="block text-sm font-bold text-gray-700 mb-4 flex items-center">
+                    <List className="w-4 h-4 mr-2 text-primary-500" /> Itinerary
+                  </label>
+                  <div className="space-y-3 mb-4">
+                    {itineraryItems.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center bg-gray-50 p-3 rounded-lg border border-gray-200"
+                      >
+                        <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold mr-3 border border-gray-200">
+                          {item.day}
+                        </div>
+                        <div className="flex-1 text-sm font-medium">
+                          <span className="font-bold">{item.title}</span>
+                          {item.accommodation && (
+                            <span className="text-xs text-gray-500 block">
+                              Stay: {item.accommodation}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeItineraryDay(idx)}
+                          className="text-red-400 hover:text-red-600"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-primary-50 p-4 rounded-xl border border-primary-100">
+                    <h5 className="text-xs font-bold text-primary-700 uppercase tracking-wide mb-3">
+                      Day {itineraryItems.length + 1}
+                    </h5>
+                    <input
+                      type="text"
+                      placeholder="Title (e.g. Island Hopping)"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-200 mb-2 text-sm"
+                      value={newDay.title}
+                      onChange={(e) =>
+                        setNewDay({
+                          ...newDay,
+                          title: e.target.value,
+                        })
+                      }
+                    />
+                    <textarea
+                      placeholder="Activity details..."
+                      className="w-full px-4 py-2 rounded-lg border border-gray-200 mb-3 text-sm h-16 resize-none"
+                      value={newDay.description}
+                      onChange={(e) =>
+                        setNewDay({
+                          ...newDay,
+                          description: e.target.value,
+                        })
+                      }
+                    ></textarea>
+
+                    <div className="mb-3">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        Accommodation
+                      </label>
+                      <div className="relative">
+                        <BedDouble className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. Hilton Garden Inn"
+                          className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 text-sm"
+                          value={newDay.accommodation || ''}
+                          onChange={(e) =>
+                            setNewDay({
+                              ...newDay,
+                              accommodation: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        Meals Included
+                      </label>
+                      <div className="flex gap-2">
+                        {['Breakfast', 'Lunch', 'Dinner'].map((meal) => (
+                          <button
+                            key={meal}
+                            type="button"
+                            onClick={() => toggleMeal(meal)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                              newDay.meals?.includes(meal)
+                                ? 'bg-orange-100 border-orange-200 text-orange-700'
+                                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                            }`}
+                          >
+                            {meal}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={addItineraryDay}
+                      className="w-full py-2 bg-primary-600 text-white rounded-lg text-sm font-bold hover:bg-primary-700"
+                    >
+                      Add to Itinerary
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STAY FORM */}
+            {isStay && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="grid grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Bedrooms
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={stayDetails.rooms}
+                      onChange={(e) =>
+                        setStayDetails({
+                          ...stayDetails,
+                          rooms: parseInt(e.target.value, 10),
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Bathrooms
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={stayDetails.bathrooms}
+                      onChange={(e) =>
+                        setStayDetails({
+                          ...stayDetails,
+                          bathrooms: parseInt(e.target.value, 10),
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Beds
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={stayDetails.beds}
+                      onChange={(e) =>
+                        setStayDetails({
+                          ...stayDetails,
+                          beds: parseInt(e.target.value, 10),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <input
+                    type="checkbox"
+                    id="bf"
+                    className="w-5 h-5 text-primary-600 rounded"
+                    checked={stayDetails.breakfastIncluded}
+                    onChange={(e) =>
+                      setStayDetails({
+                        ...stayDetails,
+                        breakfastIncluded: e.target.checked,
+                      })
+                    }
+                  />
+                  <label
+                    htmlFor="bf"
+                    className="ml-3 text-sm font-bold text-gray-700 flex items-center"
+                  >
+                    <Coffee className="w-4 h-4 mr-2" /> Breakfast Included
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Amenities
+                  </label>
+                  {stayDetails.amenities.map((item, idx) => (
+                    <div key={idx} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                        placeholder="e.g. Private Pool"
+                        value={item}
+                        onChange={(e) =>
+                          handleListChange(
+                            setStayDetails,
+                            stayDetails.amenities,
+                            idx,
+                            e.target.value,
+                          )
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeListItem(setStayDetails, stayDetails.amenities, 'amenities', idx)
+                        }
+                        className="text-gray-300 hover:text-red-500"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => addListItem(setStayDetails, stayDetails.amenities, 'amenities')}
+                    className="text-primary-600 text-xs font-bold hover:underline"
+                  >
+                    + Add Amenity
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TRANSPORT FORM */}
+            {isTransport && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Vehicle Year
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={carDetails.year}
+                      onChange={(e) =>
+                        setCarDetails({
+                          ...carDetails,
+                          year: parseInt(e.target.value, 10),
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Transmission
+                    </label>
+                    <select
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={carDetails.transmission}
+                      onChange={(e) =>
+                        setCarDetails({
+                          ...carDetails,
+                          transmission: e.target.value,
+                        })
+                      }
+                    >
+                      <option>Automatic</option>
+                      <option>Manual</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Seats
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={carDetails.seats}
+                      onChange={(e) =>
+                        setCarDetails({
+                          ...carDetails,
+                          seats: parseInt(e.target.value, 10),
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Luggage
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                      value={carDetails.luggage}
+                      onChange={(e) =>
+                        setCarDetails({
+                          ...carDetails,
+                          luggage: parseInt(e.target.value, 10),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <input
+                    type="checkbox"
+                    id="driver"
+                    className="w-5 h-5 text-primary-600 rounded"
+                    checked={carDetails.driver}
+                    onChange={(e) =>
+                      setCarDetails({
+                        ...carDetails,
+                        driver: e.target.checked,
+                      })
+                    }
+                  />
+                  <label
+                    htmlFor="driver"
+                    className="ml-3 text-sm font-bold text-gray-700 flex items-center"
+                  >
+                    <User className="w-4 h-4 mr-2" /> Driver Included
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Pricing & Availability */}
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
+              <span className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mr-3 text-sm">
+                3
+              </span>
+              Pricing & Availability
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Price ({formData.currency})
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-900 font-bold">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    name="price"
+                    required
+                    className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary-500 bg-gray-50 focus:bg-white font-bold text-lg"
+                    placeholder="0.00"
+                    value={formData.price}
+                    onChange={handleChange}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Per {isTour ? 'person' : isStay ? 'night' : 'day'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Daily {isTour ? 'Pax' : 'Unit'} Capacity
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white"
+                  value={formData.dailyCapacity}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      dailyCapacity: parseInt(e.target.value, 10),
+                    })
+                  }
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                  Block Dates
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="date"
+                    className="flex-1 px-4 py-2 rounded-xl border border-gray-200"
+                    value={newBlockedDate}
+                    onChange={(e) => setNewBlockedDate(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddBlockedDate}
+                    className="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold"
+                  >
+                    Block
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {formData.blockedDates.map((date) => (
+                    <div
+                      key={date}
+                      className="flex items-center px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-bold border border-red-100"
+                    >
+                      <Calendar className="w-3 h-3 mr-1" /> {date}
+                      <button
+                        type="button"
+                        onClick={() => removeBlockedDate(date)}
+                        className="ml-2 hover:bg-red-200 rounded-full"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
+          </div>
         </div>
 
         {/* RIGHT COLUMN - MEDIA & SUMMARY */}
         <div className="lg:col-span-1 space-y-8">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-28">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Media</h3>
-                <div className="mb-6">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cover Image</label>
-                    <div onClick={() => handleImageUploadSim('cover')} className="w-full h-40 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all bg-gray-50 relative overflow-hidden">
-                        {formData.image ? <img src={formData.image} className="w-full h-full object-cover" /> : <div className="text-center"><Upload className="w-6 h-6 mx-auto text-gray-400" /><span className="text-xs text-gray-500">Upload Cover</span></div>}
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Gallery</label>
-                    <div className="grid grid-cols-3 gap-2">
-                        {galleryImages.map((img, idx) => (
-                            <div key={idx} className="h-16 rounded-lg overflow-hidden relative group"><img src={img} className="w-full h-full object-cover" /><button type="button" onClick={() => setGalleryImages(prev => prev.filter((_, i) => i !== idx))} className="absolute top-0 right-0 bg-red-500 text-white p-0.5"><X className="w-3 h-3" /></button></div>
-                        ))}
-                        <div onClick={() => handleImageUploadSim('gallery')} className="h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:bg-primary-50"><Plus className="w-4 h-4 text-gray-400" /></div>
-                    </div>
-                </div>
-                
-                <div className="mt-8 pt-6 border-t border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Highlights</h3>
-                    <div className="space-y-2">
-                        {formData.features.map((feature, idx) => (
-                            <div key={idx} className="flex gap-2"><input type="text" className="flex-1 px-2 py-1.5 rounded border border-gray-200 text-xs" value={feature} onChange={(e) => handleFeatureChange(idx, e.target.value)} /><button onClick={() => removeFeature(idx)} className="text-red-400"><Trash className="w-3 h-3" /></button></div>
-                        ))}
-                        <button type="button" onClick={addFeature} className="text-primary-600 text-xs font-bold hover:underline">+ Add Highlight</button>
-                    </div>
-                </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 sticky top-28">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Media</h3>
+            <div className="mb-6">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Cover Image
+              </label>
+              <div
+                onClick={() => handleImageUploadSim('cover')}
+                className="w-full h-40 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all bg-gray-50 relative overflow-hidden"
+              >
+                {formData.image ? (
+                  <img src={formData.image} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center">
+                    <Upload className="w-6 h-6 mx-auto text-gray-400" />
+                    <span className="text-xs text-gray-500">Upload Cover</span>
+                  </div>
+                )}
+              </div>
             </div>
-        </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Gallery
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {galleryImages.map((img, idx) => (
+                  <div key={idx} className="h-16 rounded-lg overflow-hidden relative group">
+                    <img src={img} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setGalleryImages((prev) => prev.filter((_, i) => i !== idx))}
+                      className="absolute top-0 right-0 bg-red-500 text-white p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <div
+                  onClick={() => handleImageUploadSim('gallery')}
+                  className="h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:bg-primary-50"
+                >
+                  <Plus className="w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
 
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Highlights</h3>
+              <div className="space-y-2">
+                {formData.features.map((feature, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 px-2 py-1.5 rounded border border-gray-200 text-xs"
+                      value={feature}
+                      onChange={(e) => handleFeatureChange(idx, e.target.value)}
+                    />
+                    <button
+                      onClick={() => removeFeature(idx)}
+                      className="text-red-400"
+                      type="button"
+                    >
+                      <Trash className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addFeature}
+                  className="text-primary-600 text-xs font-bold hover:underline"
+                >
+                  + Add Highlight
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
