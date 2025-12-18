@@ -1,25 +1,26 @@
-import { ArrowLeft, Building2, Car, Palmtree } from 'lucide-react';
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
-import { useToast } from '../components/ToastContext';
-import { authService } from '../services/authService';
-import { AgentSpecialization, UserRole } from '../types';
+import { ArrowLeft, Building2, Car, Palmtree } from "lucide-react";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
+import { useToast } from "../components/ToastContext";
+import { authService } from "../services/authService";
+import { agentService } from "../services/agentService";
+import { AgentSpecialization, UserRole, VerificationStatus } from "../types";
 
 const Login: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER);
   const [specialization, setSpecialization] = useState<AgentSpecialization>(
-    AgentSpecialization.TOUR,
+    AgentSpecialization.TOUR
   );
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // kita pakai setUserFromApi saja, login FE sekarang lewat authService langsung
-  const { setUserFromApi } = useAuth();
+  // ✅ session auth: pakai login + updateUser + refreshMe
+  const { login, updateUser, refreshMe } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,18 +29,36 @@ const Login: React.FC = () => {
     const r = (targetRole as UserRole) || UserRole.CUSTOMER;
 
     if (r === UserRole.ADMIN) {
-      navigate('/admin');
+      navigate("/admin");
     } else if (r === UserRole.AGENT) {
-      navigate('/agent');
+      navigate("/agent");
     } else {
       const from = (location.state as any)?.from;
-      navigate(from || '/');
+      navigate(from || "/");
+    }
+  };
+
+  const syncVerificationStatusIfAny = async () => {
+    try {
+      const verification = await agentService.getMyVerification();
+      if (!verification) return;
+
+      const status =
+        verification?.status ||
+        verification?.verificationStatus ||
+        verification?.verification_status;
+
+      if (status) {
+        updateUser({ verificationStatus: status as VerificationStatus });
+      }
+    } catch {
+      // belum ada verification / bukan agent / 401 / dll -> abaikan
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
@@ -56,26 +75,37 @@ const Login: React.FC = () => {
           payload.specialization = specialization;
         }
 
-        const data = await authService.register(payload);
-        // data = { token, user }
+        // backend register sekarang set session + return { user: ... }
+        await authService.register(payload);
 
-        // simpan ke auth context
-        setUserFromApi(data);
-        showToast('Account created! Welcome.', 'success');
+        // ✅ ambil user terbaru dari session
+        await refreshMe();
 
-        const backendRole = data.user?.role as UserRole | undefined;
-        handleRedirectByRole(backendRole);
+        // optional: sync verification status dari endpoint verification
+        await syncVerificationStatusIfAny();
+
+        showToast("Account created! Welcome.", "success");
+
+        // redirect berdasarkan role yg dipilih (atau nanti bisa ambil dari ctx user)
+        handleRedirectByRole(role);
         return;
       }
 
       // ===== LOGIN FLOW =====
-      const data = await authService.login({ email, password });
-      // data = { token, user }
+      const result = await login(email, password);
+      if (!result.success) {
+        const msg = result.message || "Invalid credentials.";
+        setError(msg);
+        showToast(msg, "error");
+        return;
+      }
 
-      setUserFromApi(data);
-      showToast('Welcome back!', 'success');
+      // optional: sync verification status dari endpoint verification (khusus agent)
+      await syncVerificationStatusIfAny();
 
-      const backendRole = data.user?.role as UserRole | undefined;
+      showToast("Welcome back!", "success");
+
+      const backendRole = result.user?.role as UserRole | undefined;
       handleRedirectByRole(backendRole);
     } catch (err: any) {
       console.error(err);
@@ -83,10 +113,10 @@ const Login: React.FC = () => {
         err?.response?.data?.message ||
         err?.message ||
         (isRegistering
-          ? 'Registration failed. Email might already be in use.'
-          : 'Invalid credentials.');
+          ? "Registration failed. Email might already be in use."
+          : "Invalid credentials.");
       setError(msg);
-      showToast(msg, 'error');
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -94,8 +124,8 @@ const Login: React.FC = () => {
 
   const fillCredentials = (roleEmail: string) => {
     setEmail(roleEmail);
-    setPassword(''); // biarin user isi password sendiri
-    setIsRegistering(false); // Reset to login mode
+    setPassword(""); // biarin user isi password sendiri
+    setIsRegistering(false);
   };
 
   return (
@@ -119,10 +149,13 @@ const Login: React.FC = () => {
               Turn your travel dreams into reality.
             </h2>
             <p className="text-lg text-primary-100 max-w-md">
-              Join thousands of travelers who have found their perfect getaway with Trivgoo.
+              Join thousands of travelers who have found their perfect getaway
+              with Trivgoo.
             </p>
           </div>
-          <div className="text-primary-200 text-sm">&copy; 2024 Trivgoo Inc.</div>
+          <div className="text-primary-200 text-sm">
+            &copy; 2024 Trivgoo Inc.
+          </div>
         </div>
       </div>
 
@@ -137,19 +170,22 @@ const Login: React.FC = () => {
               <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
             </Link>
             <h2 className="text-3xl font-serif font-bold text-gray-900">
-              {isRegistering ? 'Create Account' : 'Welcome back'}
+              {isRegistering ? "Create Account" : "Welcome back"}
             </h2>
             <p className="mt-2 text-sm text-gray-600">
               {isRegistering
-                ? 'Enter your details to get started.'
-                : 'Please enter your details to sign in.'}
+                ? "Enter your details to get started."
+                : "Please enter your details to sign in."}
             </p>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             {isRegistering && (
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Full Name
                 </label>
                 <div className="mt-1">
@@ -168,7 +204,10 @@ const Login: React.FC = () => {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Email address
               </label>
               <div className="mt-1">
@@ -187,7 +226,10 @@ const Login: React.FC = () => {
 
             {isRegistering && (
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="role"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   I am
                 </label>
                 <div className="mt-1 grid grid-cols-2 gap-3">
@@ -195,8 +237,8 @@ const Login: React.FC = () => {
                     onClick={() => setRole(UserRole.CUSTOMER)}
                     className={`cursor-pointer px-4 py-3 rounded-xl border text-center font-medium text-sm transition-all ${
                       role === UserRole.CUSTOMER
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-gray-300 text-gray-600"
                     }`}
                   >
                     Traveler
@@ -205,8 +247,8 @@ const Login: React.FC = () => {
                     onClick={() => setRole(UserRole.AGENT)}
                     className={`cursor-pointer px-4 py-3 rounded-xl border text-center font-medium text-sm transition-all ${
                       role === UserRole.AGENT
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-gray-300 text-gray-600"
                     }`}
                   >
                     Agent / Vendor
@@ -225,8 +267,8 @@ const Login: React.FC = () => {
                     onClick={() => setSpecialization(AgentSpecialization.TOUR)}
                     className={`cursor-pointer p-2 rounded-xl border flex flex-col items-center justify-center text-center gap-1 transition-all ${
                       specialization === AgentSpecialization.TOUR
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 text-gray-500 hover:border-gray-300"
                     }`}
                   >
                     <Palmtree className="w-5 h-5" />
@@ -236,19 +278,21 @@ const Login: React.FC = () => {
                     onClick={() => setSpecialization(AgentSpecialization.STAY)}
                     className={`cursor-pointer p-2 rounded-xl border flex flex-col items-center justify-center text-center gap-1 transition-all ${
                       specialization === AgentSpecialization.STAY
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 text-gray-500 hover:border-gray-300"
                     }`}
                   >
                     <Building2 className="w-5 h-5" />
                     <span className="text-[10px] font-bold">Stay</span>
                   </div>
                   <div
-                    onClick={() => setSpecialization(AgentSpecialization.TRANSPORT)}
+                    onClick={() =>
+                      setSpecialization(AgentSpecialization.TRANSPORT)
+                    }
                     className={`cursor-pointer p-2 rounded-xl border flex flex-col items-center justify-center text-center gap-1 transition-all ${
                       specialization === AgentSpecialization.TRANSPORT
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 text-gray-500 hover:border-gray-300"
                     }`}
                   >
                     <Car className="w-5 h-5" />
@@ -260,7 +304,10 @@ const Login: React.FC = () => {
 
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Password
                 </label>
                 {!isRegistering && (
@@ -281,7 +328,9 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                  placeholder={isRegistering ? 'Create a password' : 'Enter your password'}
+                  placeholder={
+                    isRegistering ? "Create a password" : "Enter your password"
+                  }
                 />
               </div>
             </div>
@@ -305,26 +354,28 @@ const Login: React.FC = () => {
               >
                 {loading
                   ? isRegistering
-                    ? 'Signing up...'
-                    : 'Signing in...'
+                    ? "Signing up..."
+                    : "Signing in..."
                   : isRegistering
-                  ? 'Sign Up'
-                  : 'Sign in'}
+                  ? "Sign Up"
+                  : "Sign in"}
               </button>
             </div>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              {isRegistering ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {isRegistering
+                ? "Already have an account?"
+                : "Don't have an account?"}{" "}
               <button
                 onClick={() => {
                   setIsRegistering(!isRegistering);
-                  setError('');
+                  setError("");
                 }}
                 className="font-bold text-primary-600 hover:text-primary-500 transition-colors"
               >
-                {isRegistering ? 'Sign in' : 'Sign up'}
+                {isRegistering ? "Sign in" : "Sign up"}
               </button>
             </p>
           </div>
@@ -337,25 +388,27 @@ const Login: React.FC = () => {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Demo Accounts</span>
+                  <span className="px-2 bg-white text-gray-500">
+                    Demo Accounts
+                  </span>
                 </div>
               </div>
 
               <div className="mt-6 grid grid-cols-3 gap-3">
                 <button
-                  onClick={() => fillCredentials('user@gmail.com')}
+                  onClick={() => fillCredentials("user@gmail.com")}
                   className="w-full flex items-center justify-center py-2 px-4 border border-gray-200 rounded-lg shadow-sm bg-white text-xs font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-all"
                 >
                   Customer
                 </button>
                 <button
-                  onClick={() => fillCredentials('agent@trivgoo.com')}
+                  onClick={() => fillCredentials("agent@trivgoo.com")}
                   className="w-full flex items-center justify-center py-2 px-4 border border-gray-200 rounded-lg shadow-sm bg-white text-xs font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-all"
                 >
                   Agent
                 </button>
                 <button
-                  onClick={() => fillCredentials('admin@trivgoo.com')}
+                  onClick={() => fillCredentials("admin@trivgoo.com")}
                   className="w-full flex items-center justify-center py-2 px-4 border border-gray-200 rounded-lg shadow-sm bg-white text-xs font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-all"
                 >
                   Admin

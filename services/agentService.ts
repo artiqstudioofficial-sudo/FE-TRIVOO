@@ -1,6 +1,6 @@
 // services/agentService.ts
-import { AgentSpecialization, AgentType } from '../types';
-import http from './http';
+import { AgentSpecialization, AgentType } from "../types";
+import http from "./http";
 
 export interface VerifyAgentPayload {
   type: AgentType;
@@ -11,7 +11,7 @@ export interface VerifyAgentPayload {
   accountNumber: string;
   accountHolder: string;
   specialization: AgentSpecialization;
-  idDocument?: File | null; // file KTP / Passport (opsional)
+  idDocument?: File | null;
 }
 
 export const agentService = {
@@ -28,29 +28,23 @@ export const agentService = {
       specialization,
     } = payload;
 
-    // Kalau ada dokumen, kirim multipart/form-data
     if (idDocument) {
       const formData = new FormData();
+      formData.append("type", type);
+      formData.append("idCardNumber", idCardNumber);
+      formData.append("taxId", taxId);
+      if (companyName) formData.append("companyName", companyName);
+      formData.append("bankName", bankName);
+      formData.append("accountNumber", accountNumber);
+      formData.append("accountHolder", accountHolder);
+      formData.append("specialization", specialization);
+      formData.append("idDocument", idDocument);
 
-      formData.append('type', type);
-      formData.append('idCardNumber', idCardNumber);
-      formData.append('taxId', taxId);
-      if (companyName) formData.append('companyName', companyName);
-      formData.append('bankName', bankName);
-      formData.append('accountNumber', accountNumber);
-      formData.append('accountHolder', accountHolder);
-      formData.append('specialization', specialization);
-      formData.append('idDocument', idDocument); // nama field harus sama dengan multer (`upload.single('idDocument')`)
-
-      await http.post('/agent/verification', formData, {
-        // Jangan set Content-Type sendiri, biar browser yg set boundary
-        headers: {
-          // 'Content-Type': 'multipart/form-data',
-        },
+      await http.post("/agent/verification", formData, {
+        headers: {},
       });
     } else {
-      // Tanpa file: kirim JSON biasa
-      await http.post('/agent/verification', {
+      await http.post("/agent/verification", {
         type,
         idCardNumber,
         taxId,
@@ -64,7 +58,7 @@ export const agentService = {
   },
 
   async getMyVerification() {
-    const res = await http.get('/agent/verification');
-    return res.data.data || null;
+    const res = await http.get("/agent/verification");
+    return res.data?.data || null;
   },
 };
