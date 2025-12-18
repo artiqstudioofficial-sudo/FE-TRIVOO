@@ -8,13 +8,17 @@ import {
   LayoutDashboard,
   Upload,
   User,
-} from 'lucide-react';
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../AuthContext';
-import { agentService } from '../../services/agentService';
-import { authService } from '../../services/authService';
-import { AgentSpecialization, AgentType, VerificationStatus } from '../../types';
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../AuthContext";
+import { agentService } from "../../services/agentService";
+import { authService } from "../../services/authService";
+import {
+  AgentSpecialization,
+  AgentType,
+  VerificationStatus,
+} from "../../types";
 
 const AgentVerification: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -26,28 +30,28 @@ const AgentVerification: React.FC = () => {
 
   const [formData, setFormData] = useState({
     type: AgentType.INDIVIDUAL,
-    idCardNumber: '',
-    taxId: '',
-    companyName: '',
-    bankName: '',
-    accountNumber: '',
-    accountHolder: '',
+    idCardNumber: "",
+    taxId: "",
+    companyName: "",
+    bankName: "",
+    accountNumber: "",
+    accountHolder: "",
   });
 
   const [idDocument, setIdDocument] = useState<File | null>(null);
-  const [idDocumentName, setIdDocumentName] = useState<string>('');
+  const [idDocumentName, setIdDocumentName] = useState<string>("");
 
   // Redirect if not logged in
   useEffect(() => {
     if (!user) {
-      navigate('/login');
+      navigate("/login");
     }
   }, [user, navigate]);
 
   // Redirect if already verified
   useEffect(() => {
     if (user?.verificationStatus === VerificationStatus.VERIFIED) {
-      navigate('/agent');
+      navigate("/agent");
     }
   }, [user, navigate]);
 
@@ -60,10 +64,12 @@ const AgentVerification: React.FC = () => {
             <div className="absolute inset-0 bg-amber-100 rounded-full animate-ping opacity-25" />
             <Clock className="w-12 h-12 text-amber-500" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Verification Under Review</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Verification Under Review
+          </h2>
           <p className="text-gray-500 text-lg mb-8 max-w-md mx-auto leading-relaxed">
-            Thank you for submitting your documents. Our admin team is currently reviewing your
-            profile to ensure safety and quality.
+            Thank you for submitting your documents. Our admin team is currently
+            reviewing your profile to ensure safety and quality.
           </p>
 
           <div className="bg-gray-50 rounded-xl p-6 text-left max-w-md mx-auto border border-gray-100 mb-10">
@@ -92,14 +98,14 @@ const AgentVerification: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button
-              onClick={() => navigate('/agent')}
+              onClick={() => navigate("/agent")}
               className="inline-flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/20"
             >
               <LayoutDashboard className="w-5 h-5 mr-2" />
               Explore Dashboard
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate("/")}
               className="inline-flex items-center justify-center px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
             >
               Return Home
@@ -110,14 +116,16 @@ const AgentVerification: React.FC = () => {
     );
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setIdDocument(file);
-    setIdDocumentName(file ? file.name : '');
+    setIdDocumentName(file ? file.name : "");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -151,7 +159,7 @@ const AgentVerification: React.FC = () => {
       const msg =
         err?.response?.data?.message ||
         err?.message ||
-        'Failed to submit verification. Please try again.';
+        "Failed to submit verification. Please try again.";
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -161,8 +169,12 @@ const AgentVerification: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto py-10">
       <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Agent Verification</h1>
-        <p className="text-gray-500">Complete your profile to start listing services on Trivgoo.</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Agent Verification
+        </h1>
+        <p className="text-gray-500">
+          Complete your profile to start listing services on Trivgoo.
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -171,8 +183,8 @@ const AgentVerification: React.FC = () => {
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${
                 step === 1
-                  ? 'bg-white text-primary-600 border-white'
-                  : 'bg-primary-700 border-primary-500 text-primary-300'
+                  ? "bg-white text-primary-600 border-white"
+                  : "bg-primary-700 border-primary-500 text-primary-300"
               }`}
             >
               1
@@ -181,15 +193,15 @@ const AgentVerification: React.FC = () => {
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${
                 step === 2
-                  ? 'bg-white text-primary-600 border-white'
-                  : 'bg-primary-700 border-primary-500 text-primary-300'
+                  ? "bg-white text-primary-600 border-white"
+                  : "bg-primary-700 border-primary-500 text-primary-300"
               }`}
             >
               2
             </div>
           </div>
           <span className="font-bold uppercase text-sm tracking-wider">
-            {step === 1 ? 'Profile Details' : 'Bank Details'}
+            {step === 1 ? "Profile Details" : "Bank Details"}
           </span>
         </div>
 
@@ -197,25 +209,31 @@ const AgentVerification: React.FC = () => {
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">Agent Type</label>
+                <label className="block text-sm font-bold text-gray-700 mb-3">
+                  Agent Type
+                </label>
                 <div className="grid grid-cols-2 gap-4">
                   <div
-                    onClick={() => setFormData({ ...formData, type: AgentType.INDIVIDUAL })}
+                    onClick={() =>
+                      setFormData({ ...formData, type: AgentType.INDIVIDUAL })
+                    }
                     className={`p-4 border-2 rounded-xl cursor-pointer flex items-center gap-3 transition-all ${
                       formData.type === AgentType.INDIVIDUAL
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <User className="w-5 h-5" />
                     <span className="font-bold">Individual</span>
                   </div>
                   <div
-                    onClick={() => setFormData({ ...formData, type: AgentType.CORPORATE })}
+                    onClick={() =>
+                      setFormData({ ...formData, type: AgentType.CORPORATE })
+                    }
                     className={`p-4 border-2 rounded-xl cursor-pointer flex items-center gap-3 transition-all ${
                       formData.type === AgentType.CORPORATE
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <Building2 className="w-5 h-5" />
@@ -255,7 +273,9 @@ const AgentVerification: React.FC = () => {
 
               {formData.type === AgentType.CORPORATE && (
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Company Name</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Company Name
+                  </label>
                   <input
                     required
                     name="companyName"
@@ -277,7 +297,7 @@ const AgentVerification: React.FC = () => {
                 >
                   <Upload className="w-8 h-8 mb-2" />
                   <span className="text-sm">
-                    {idDocumentName || 'Click to upload KTP or Passport'}
+                    {idDocumentName || "Click to upload KTP or Passport"}
                   </span>
                   <input
                     id="idDocument"
@@ -310,7 +330,9 @@ const AgentVerification: React.FC = () => {
                 </h4>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Bank Name</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Bank Name
+                    </label>
                     <input
                       required
                       name="bankName"
@@ -370,7 +392,7 @@ const AgentVerification: React.FC = () => {
                   disabled={submitting}
                   className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {submitting ? 'Submitting...' : 'Submit Verification'}
+                  {submitting ? "Submitting..." : "Submit Verification"}
                 </button>
               </div>
             </div>
