@@ -3,11 +3,23 @@
 import { CheckCircle, ShieldAlert, UserCheck, User as UserIcon, XCircle } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../../services/adminService';
-import { User, VerificationStatus } from '../../types';
+import { AgentListItem, VerificationStatus } from '../../types';
+
+// ✅ sesuaikan import type (kalau kamu taruh di ../../types/agent)
+
+// kalau customer kamu belum punya interface khusus, minimal bikin ini:
+type CustomerListItem = {
+  id: number;
+  name: string;
+  email: string;
+  role: 'CUSTOMER';
+  avatar: string | null;
+};
 
 const UsersManagement: React.FC = () => {
-  const [agents, setAgents] = useState<User[]>([]);
-  const [customers, setCustomers] = useState<User[]>([]);
+  // ✅ array item, bukan AgentListResponse[]
+  const [agents, setAgents] = useState<AgentListItem[]>([]);
+  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [activeTab, setActiveTab] = useState<'agents' | 'customers'>('agents');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,13 +29,18 @@ const UsersManagement: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const [agentData, customerData] = await Promise.all([
+      const [agentRes, customerRes] = await Promise.all([
         adminService.getAllAgents(),
         adminService.getAllCustomers(),
       ]);
 
-      setAgents(agentData);
-      setCustomers(customerData);
+      /**
+       * Asumsi service kamu return:
+       * - agentRes: { status, error, message, data: AgentListItem[] }
+       * - customerRes: { status, error, message, data: CustomerListItem[] }
+       */
+      setAgents(agentRes || []);
+      setCustomers(customerRes || []);
     } catch (e: any) {
       console.error(e);
       setError(e?.message || 'Failed to load users');
@@ -47,7 +64,7 @@ const UsersManagement: React.FC = () => {
     }
   };
 
-  const getVerificationBadge = (status?: VerificationStatus) => {
+  const getVerificationBadge = (status?: VerificationStatus | string) => {
     switch (status) {
       case VerificationStatus.VERIFIED:
         return (
@@ -76,7 +93,7 @@ const UsersManagement: React.FC = () => {
     }
   };
 
-  const formatEnum = (val?: string) => {
+  const formatEnum = (val?: string | null) => {
     if (!val) return '-';
     return val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
   };
@@ -110,6 +127,7 @@ const UsersManagement: React.FC = () => {
               <UserCheck className="w-4 h-4 mr-2" />
               Agents ({agents.length})
             </button>
+
             <button
               onClick={() => setActiveTab('customers')}
               className={`pb-4 text-sm font-bold transition-all border-b-2 flex items-center ${
@@ -148,59 +166,76 @@ const UsersManagement: React.FC = () => {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-100">
-                {agents.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              className="w-full h-full object-cover"
-                              alt={user.name}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                              {user.name?.charAt(0).toUpperCase()}
-                            </div>
-                          )}
+                {agents.map((user) => {
+                  // ✅ type ambil dari verification (bisa null)
+                  const agentType = user.verification?.agent_type ?? null;
+
+                  // ✅ specialization: prioritaskan dari verification, fallback ke user
+                  const specialization =
+                    user.verification?.specialization ?? user.specialization ?? null;
+
+                  // ✅ status badge: pakai verification_status dari users (source untuk FE)
+                  const status = user.verification_status as any;
+
+                  return (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
+                            {user.avatar ? (
+                              <img
+                                src={user.avatar}
+                                className="w-full h-full object-cover"
+                                alt={user.name}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                                {user.name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-900">{user.name}</div>
+                            <div className="text-xs text-gray-500">{user.email}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-900">{user.name}</div>
-                          <div className="text-xs text-gray-500">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">
-                      {formatEnum(user.agentType)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">
-                      {formatEnum(user.specialization)}
-                    </td>
-                    <td className="px-6 py-4">{getVerificationBadge(user.verificationStatus)}</td>
-                    <td className="px-6 py-4 text-right">
-                      {user.verificationStatus === VerificationStatus.PENDING && (
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleVerify(user.id, 'approve')}
-                            className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors"
-                            title="Approve"
-                          >
-                            <CheckCircle className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleVerify(user.id, 'reject')}
-                            className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
-                            title="Reject"
-                          >
-                            <XCircle className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                        {formatEnum(agentType)}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                        {formatEnum(specialization)}
+                      </td>
+
+                      <td className="px-6 py-4">{getVerificationBadge(status)}</td>
+
+                      <td className="px-6 py-4 text-right">
+                        {status === VerificationStatus.PENDING && (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleVerify(user.id, 'approve')}
+                              className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors"
+                              title="Approve"
+                            >
+                              <CheckCircle className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleVerify(user.id, 'reject')}
+                              className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                              title="Reject"
+                            >
+                              <XCircle className="w-5 h-5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -218,6 +253,7 @@ const UsersManagement: React.FC = () => {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-100">
                 {customers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">

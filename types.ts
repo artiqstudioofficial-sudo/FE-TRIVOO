@@ -257,3 +257,62 @@ export interface PayoutRequest {
   status: PayoutStatus;
   date: string;
 }
+
+export type VerificationStatusUser = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+export type AgentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface AgentVerification {
+  id: number;
+  user_id: number;
+
+  agent_type: AgentType;
+  id_card_number: string;
+  tax_id: string;
+
+  company_name: string | null;
+
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_holder: string;
+
+  specialization: AgentSpecialization;
+
+  id_document_url: string | null;
+
+  status: AgentVerificationStatus;
+
+  reviewed_by: number | null;
+  reviewed_at: string | null; // ISO string dari MySQL/Node
+  rejection_reason: string | null;
+
+  created_at: string; // ISO string
+  updated_at: string; // ISO string
+}
+
+export interface AgentListItem {
+  id: number;
+  name: string;
+  email: string;
+  role: 'AGENT';
+
+  avatar: string | null;
+
+  // status ringkas di users (yang FE baca untuk gating UI)
+  verification_status: VerificationStatusUser;
+
+  specialization: AgentSpecialization | null;
+
+  // detail verifikasi bisa null kalau belum pernah submit
+  verification: AgentVerification | null;
+}
+
+export interface ApiResponse<T> {
+  status: number;
+  error: boolean;
+  message: string;
+  data: T;
+}
+
+// Response endpoint agent list:
+export type AgentListResponse = ApiResponse<AgentListItem[]>;
