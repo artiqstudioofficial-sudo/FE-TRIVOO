@@ -1,6 +1,5 @@
-// services/agentService.ts
-import { AgentSpecialization, AgentType } from "../types";
-import http from "./http";
+import { AgentSpecialization, AgentType } from '../types';
+import http from './http';
 
 export interface VerifyAgentPayload {
   type: AgentType;
@@ -30,35 +29,35 @@ export const agentService = {
 
     if (idDocument) {
       const formData = new FormData();
-      formData.append("type", type);
-      formData.append("idCardNumber", idCardNumber);
-      formData.append("taxId", taxId);
-      if (companyName) formData.append("companyName", companyName);
-      formData.append("bankName", bankName);
-      formData.append("accountNumber", accountNumber);
-      formData.append("accountHolder", accountHolder);
-      formData.append("specialization", specialization);
-      formData.append("idDocument", idDocument);
+      formData.append('type', type);
+      formData.append('id_card_number', idCardNumber);
+      formData.append('tax_id', taxId);
+      if (companyName) formData.append('company_name', companyName);
+      formData.append('bank_name', bankName);
+      formData.append('bank_account_number', accountNumber);
+      formData.append('bank_account_holder', accountHolder);
+      formData.append('specialization', specialization);
+      formData.append('id_document', idDocument);
 
-      await http.post("/agent/verification", formData, {
+      await http.post('/agent/verification', formData, {
         headers: {},
       });
     } else {
-      await http.post("/agent/verification", {
-        type,
-        idCardNumber,
-        taxId,
-        companyName,
-        bankName,
-        accountNumber,
-        accountHolder,
-        specialization,
+      await http.post('/agent/verification', {
+        type: type,
+        id_card_number: idCardNumber,
+        tax_id: taxId,
+        company_name: companyName,
+        bank_name: bankName,
+        bank_account_number: accountNumber,
+        bank_account_holder: accountHolder,
+        specialization: specialization,
       });
     }
   },
 
   async getMyVerification() {
-    const res = await http.get("/agent/verification");
-    return res.data?.data || null;
+    const res = await http.get('/agent/verification');
+    return res.data;
   },
 };

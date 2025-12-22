@@ -1,15 +1,14 @@
-// src/services/adminService.ts
 import http from './http';
 
 export const adminService = {
   async getAllAgents() {
     const res = await http.get('/admin/users/agents');
-    return res.data.data || [];
+    return res.data || [];
   },
 
   async getAllCustomers() {
     const res = await http.get('/admin/users/customers');
-    return res.data.data || [];
+    return res.data || [];
   },
 
   async updateAgentVerification(userId: number, action: 'APPROVE' | 'REJECT') {

@@ -16,12 +16,10 @@ import {
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
+import { agentProductService } from '../../services/agentProductService';
 import {
   AgentProduct,
   AgentProductPayload,
-  agentProductService,
-} from '../../services/agentProductService';
-import {
   AgentSpecialization,
   ItineraryDay,
   ProductDetails,
@@ -116,7 +114,7 @@ const AgentAddProduct: React.FC = () => {
       (async () => {
         try {
           const product: AgentProduct = await agentProductService.getMyProduct(Number(id));
-          if (product && product.ownerId === user?.id) {
+          if (product && product.owner_id === user?.id) {
             // Populate General Fields
             setFormData({
               name: product.name,
@@ -126,8 +124,8 @@ const AgentAddProduct: React.FC = () => {
               location: product.location,
               image: product.image,
               features: product.features || [''],
-              dailyCapacity: product.dailyCapacity || 10,
-              blockedDates: product.blockedDates || [],
+              dailyCapacity: product.daily_capacity || 10,
+              blockedDates: product.blocked_dates || [],
             });
             setGalleryImages(product.images || []);
 
@@ -179,7 +177,7 @@ const AgentAddProduct: React.FC = () => {
   }, [id, user, navigate]);
 
   // If not verified, show block message
-  if (user?.verificationStatus !== VerificationStatus.VERIFIED) {
+  if (user?.verification_status !== VerificationStatus.VERIFIED) {
     return (
       <div className="max-w-2xl mx-auto py-20 text-center">
         <div className="bg-amber-50 rounded-3xl p-10 border border-amber-100">
@@ -366,7 +364,7 @@ const AgentAddProduct: React.FC = () => {
     }
 
     const payload: AgentProductPayload = {
-      categoryId,
+      category_id: categoryId,
       name: formData.name,
       description: formData.description,
       price: Number(formData.price),
@@ -378,8 +376,8 @@ const AgentAddProduct: React.FC = () => {
       images: galleryImages,
       features: formData.features.filter((f) => f.trim() !== ''),
       details: finalDetails,
-      dailyCapacity: Number(formData.dailyCapacity),
-      blockedDates: formData.blockedDates,
+      daily_capacity: Number(formData.dailyCapacity),
+      blocked_dates: formData.blockedDates,
     };
 
     try {

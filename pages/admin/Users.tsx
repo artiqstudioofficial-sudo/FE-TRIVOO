@@ -1,53 +1,99 @@
 // src/pages/admin/UsersManagement.tsx
 
 import { CheckCircle, ShieldAlert, UserCheck, User as UserIcon, XCircle } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { adminService } from '../../services/adminService';
-import { User, VerificationStatus } from '../../types';
+import { AgentListItem, ApiResponse, CustomerListItem, VerificationStatus } from '../../types';
+
+function unwrapArray<T>(res: unknown): T[] {
+  // support kalau service return langsung array
+  if (Array.isArray(res)) return res as T[];
+
+  // support kalau service return { data: [] }
+  const maybe = res as ApiResponse<T[]>;
+  if (Array.isArray(maybe?.data)) return maybe.data;
+
+  return [];
+}
 
 const UsersManagement: React.FC = () => {
-  const [agents, setAgents] = useState<User[]>([]);
-  const [customers, setCustomers] = useState<User[]>([]);
+  const [agents, setAgents] = useState<AgentListItem[]>([]);
+  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [activeTab, setActiveTab] = useState<'agents' | 'customers'>('agents');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = async () => {
+  // ✅ per-user loading untuk tombol approve/reject
+  const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
+
+  // ✅ anti setState setelah unmount
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const [agentData, customerData] = await Promise.all([
+      const [agentRes, customerRes] = await Promise.all([
         adminService.getAllAgents(),
         adminService.getAllCustomers(),
       ]);
 
-      setAgents(agentData);
-      setCustomers(customerData);
+      const nextAgents = unwrapArray<AgentListItem>(agentRes);
+      const nextCustomers = unwrapArray<CustomerListItem>(customerRes);
+
+      if (!mountedRef.current) return;
+      setAgents(nextAgents);
+      setCustomers(nextCustomers);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message || 'Failed to load users');
+      if (!mountedRef.current) return;
+      setError(e?.response?.data?.message || e?.message || 'Failed to load users');
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current) setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  const handleVerify = async (userId: number, action: 'approve' | 'reject') => {
-    try {
-      const apiAction = action === 'approve' ? 'APPROVE' : 'REJECT';
-      await adminService.updateAgentVerification(userId, apiAction);
-      await loadData();
-    } catch (e: any) {
-      console.error(e);
-      setError(e?.message || 'Failed to update verification status');
-    }
-  };
+  const handleVerify = useCallback(
+    async (userId: number, action: 'approve' | 'reject') => {
+      try {
+        setError(null);
+        setProcessingIds((prev) => new Set(prev).add(userId));
 
-  const getVerificationBadge = (status?: VerificationStatus) => {
+        const apiAction = action === 'approve' ? 'APPROVE' : 'REJECT';
+        await adminService.updateAgentVerification(userId, apiAction);
+
+        // reload list
+        await loadData();
+      } catch (e: any) {
+        console.error(e);
+        if (!mountedRef.current) return;
+        setError(
+          e?.response?.data?.message || e?.message || 'Failed to update verification status',
+        );
+      } finally {
+        if (!mountedRef.current) return;
+        setProcessingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(userId);
+          return next;
+        });
+      }
+    },
+    [loadData],
+  );
+
+  const getVerificationBadge = (status?: VerificationStatus | string | null) => {
     switch (status) {
       case VerificationStatus.VERIFIED:
         return (
@@ -76,10 +122,21 @@ const UsersManagement: React.FC = () => {
     }
   };
 
-  const formatEnum = (val?: string) => {
+  const formatEnum = (val?: string | null) => {
     if (!val) return '-';
-    return val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+    const s = String(val).replaceAll('_', ' ');
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
   };
+
+  const agentCount = agents.length;
+  const customerCount = customers.length;
+
+  const emptyStateText = useMemo(() => {
+    if (isLoading) return '';
+    if (activeTab === 'agents' && agentCount === 0) return 'No agents found.';
+    if (activeTab === 'customers' && customerCount === 0) return 'No customers found.';
+    return '';
+  }, [activeTab, agentCount, customerCount, isLoading]);
 
   return (
     <div className="space-y-6">
@@ -106,10 +163,12 @@ const UsersManagement: React.FC = () => {
                   ? 'border-primary-600 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-800'
               }`}
+              type="button"
             >
               <UserCheck className="w-4 h-4 mr-2" />
-              Agents ({agents.length})
+              Agents ({agentCount})
             </button>
+
             <button
               onClick={() => setActiveTab('customers')}
               className={`pb-4 text-sm font-bold transition-all border-b-2 flex items-center ${
@@ -117,9 +176,10 @@ const UsersManagement: React.FC = () => {
                   ? 'border-primary-600 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-800'
               }`}
+              type="button"
             >
               <UserIcon className="w-4 h-4 mr-2" />
-              Customers ({customers.length})
+              Customers ({customerCount})
             </button>
           </div>
         </div>
@@ -127,6 +187,8 @@ const UsersManagement: React.FC = () => {
         <div className="overflow-x-auto">
           {isLoading ? (
             <div className="p-8 text-center text-sm text-gray-500">Loading...</div>
+          ) : emptyStateText ? (
+            <div className="p-8 text-center text-sm text-gray-500">{emptyStateText}</div>
           ) : activeTab === 'agents' ? (
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
@@ -148,59 +210,82 @@ const UsersManagement: React.FC = () => {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-100">
-                {agents.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              className="w-full h-full object-cover"
-                              alt={user.name}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                              {user.name?.charAt(0).toUpperCase()}
-                            </div>
-                          )}
+                {agents.map((u) => {
+                  const agentType = u.verification?.agent_type ?? null;
+                  const specialization = u.verification?.specialization ?? u.specialization ?? null;
+
+                  // ✅ handle beberapa kemungkinan field dari backend
+                  const status =
+                    (u as any).verification_status ?? (u as any).verificationStatus ?? null;
+
+                  const isPending = status === VerificationStatus.PENDING;
+                  const isProcessing = processingIds.has(u.id);
+
+                  return (
+                    <tr key={u.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
+                            {u.avatar ? (
+                              <img
+                                src={u.avatar}
+                                className="w-full h-full object-cover"
+                                alt={u.name}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                                {u.name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-900">{u.name}</div>
+                            <div className="text-xs text-gray-500">{u.email}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-900">{user.name}</div>
-                          <div className="text-xs text-gray-500">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">
-                      {formatEnum(user.agentType)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">
-                      {formatEnum(user.specialization)}
-                    </td>
-                    <td className="px-6 py-4">{getVerificationBadge(user.verificationStatus)}</td>
-                    <td className="px-6 py-4 text-right">
-                      {user.verificationStatus === VerificationStatus.PENDING && (
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleVerify(user.id, 'approve')}
-                            className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors"
-                            title="Approve"
-                          >
-                            <CheckCircle className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleVerify(user.id, 'reject')}
-                            className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
-                            title="Reject"
-                          >
-                            <XCircle className="w-5 h-5" />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                        {formatEnum(agentType)}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">
+                        {formatEnum(specialization)}
+                      </td>
+
+                      <td className="px-6 py-4">{getVerificationBadge(status)}</td>
+
+                      <td className="px-6 py-4 text-right">
+                        {isPending ? (
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleVerify(u.id, 'approve')}
+                              className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                              title="Approve"
+                              type="button"
+                              disabled={isProcessing}
+                            >
+                              <CheckCircle className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleVerify(u.id, 'reject')}
+                              className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                              title="Reject"
+                              type="button"
+                              disabled={isProcessing}
+                            >
+                              <XCircle className="w-5 h-5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -218,29 +303,30 @@ const UsersManagement: React.FC = () => {
                   </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-100">
-                {customers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                {customers.map((u) => (
+                  <tr key={u.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
-                          {user.avatar ? (
+                          {u.avatar ? (
                             <img
-                              src={user.avatar}
+                              src={u.avatar}
                               className="w-full h-full object-cover"
-                              alt={user.name}
+                              alt={u.name}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                              {user.name?.charAt(0).toUpperCase()}
+                              {u.name?.charAt(0).toUpperCase()}
                             </div>
                           )}
                         </div>
-                        <div className="text-sm font-bold text-gray-900">{user.name}</div>
+                        <div className="text-sm font-bold text-gray-900">{u.name}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 font-mono">#{user.id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{u.email}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 font-mono">#{u.id}</td>
                   </tr>
                 ))}
               </tbody>

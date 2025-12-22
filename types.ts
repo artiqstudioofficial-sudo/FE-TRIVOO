@@ -1,115 +1,18 @@
-// Enums for Roles and Statuses
 export enum UserRole {
   ADMIN = 'ADMIN',
   AGENT = 'AGENT',
   CUSTOMER = 'CUSTOMER',
 }
 
-/**
- * Untuk yang di bawah ini aku biarkan lowercase dulu,
- * asumsi API kamu untuk booking/payment/payout masih pakai lowercase.
- * Kalau nanti di API diubah ke uppercase, tinggal samain di sini.
- */
-export enum BookingStatus {
-  PENDING = 'pending',
-  CONFIRMED = 'confirmed',
-  CANCELLED = 'cancelled',
-  COMPLETED = 'completed',
-}
-
-export enum PaymentStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  FAILED = 'failed',
-}
-
-export enum PayoutStatus {
-  PENDING = 'pending',
-  PROCESSED = 'processed',
-  REJECTED = 'rejected',
-}
-
-/**
- * Ini yang penting: SESUAIKAN dengan kolom `users.verification_status`
- * di DB yang sekarang pakai UPPERCASE (UNVERIFIED, PENDING, VERIFIED, REJECTED)
- */
-export enum VerificationStatus {
-  UNVERIFIED = 'UNVERIFIED',
-  PENDING = 'PENDING',
-  VERIFIED = 'VERIFIED',
-  REJECTED = 'REJECTED',
-}
-
-/**
- * SESUAIKAN dengan API agent_verifications:
- * - agent_type: 'INDIVIDUAL' | 'CORPORATE'
- * - specialization: 'TOUR' | 'STAY' | 'TRANSPORT'
- */
-export enum AgentType {
-  INDIVIDUAL = 'INDIVIDUAL',
-  CORPORATE = 'CORPORATE',
-}
-
-export enum AgentSpecialization {
-  TOUR = 'TOUR',
-  STAY = 'STAY',
-  TRANSPORT = 'TRANSPORT',
-}
-
-// Sub-Categories Enums
-export enum TourCategory {
-  NATURE = 'Nature',
-  ADVENTURE = 'Adventure',
-  SPIRITUAL = 'Spiritual',
-  CULTURAL = 'Cultural',
-  CULINARY = 'Culinary',
-}
-
-export enum StayCategory {
-  HOTEL = 'Hotel',
-  VILLA = 'Villa',
-  HOMESTAY = 'Homestay',
-  RESORT = 'Resort',
-}
-
-export enum TransportCategory {
-  CAR_RENTAL = 'Car Rental',
-  AIRPORT_TRANSFER = 'Airport Transfer',
-  MOTORBIKE = 'Motorbike',
-}
-
-// Flash Sale Campaign
-export interface FlashSaleCampaign {
+export type AuthUser = {
   id: number;
   name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  minDiscount: number; // e.g. 20 for 20%
-  adminFeePercentage: number; // e.g. 5 for 5% instead of standard 11%
-  image: string;
-  isActive: boolean;
-}
-
-// Flash Sale Types
-export interface FlashSaleDetails {
-  salePrice: number;
-  originalPrice: number;
-  discountPercentage: number;
-  status: 'pending' | 'approved' | 'rejected' | 'ended';
-  endTime?: string; // Set by Admin upon approval
-  requestDate: string;
-  campaignId?: number; // Optional link to a specific campaign
-}
-
-// Detailed Interfaces for Product Types
-export interface ItineraryDay {
-  day: number;
-  title: string;
-  description: string;
-  meals?: string[]; // e.g. ['Breakfast', 'Lunch']
-  accommodation?: string; // e.g. 'Hotel Neo'
-}
+  avatar: string;
+  email: string;
+  role: UserRole;
+  specialization?: AgentSpecialization | null;
+  verification_status?: VerificationStatus;
+};
 
 export interface TourDetails {
   type: 'tour';
@@ -153,6 +56,114 @@ export interface CarDetails {
 
 export type ProductDetails = TourDetails | StayDetails | CarDetails;
 
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+  role?: 'CUSTOMER' | 'AGENT' | 'ADMIN';
+  specialization?: string;
+}
+
+export type ApiEnvelope<T> = {
+  status: number;
+  error: boolean;
+  message: string;
+  data: T;
+};
+
+export enum BookingStatus {
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
+  CANCELLED = 'cancelled',
+  COMPLETED = 'completed',
+}
+
+export enum PaymentStatus {
+  PENDING = 'pending',
+  PAID = 'paid',
+  FAILED = 'failed',
+}
+
+export enum PayoutStatus {
+  PENDING = 'pending',
+  PROCESSED = 'processed',
+  REJECTED = 'rejected',
+}
+
+export enum VerificationStatus {
+  UNVERIFIED = 'UNVERIFIED',
+  PENDING = 'PENDING',
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED',
+}
+
+export enum AgentType {
+  INDIVIDUAL = 'INDIVIDUAL',
+  CORPORATE = 'CORPORATE',
+}
+
+export enum AgentSpecialization {
+  TOUR = 'TOUR',
+  STAY = 'STAY',
+  TRANSPORT = 'TRANSPORT',
+}
+
+export enum TourCategory {
+  NATURE = 'Nature',
+  ADVENTURE = 'Adventure',
+  SPIRITUAL = 'Spiritual',
+  CULTURAL = 'Cultural',
+  CULINARY = 'Culinary',
+}
+
+export enum StayCategory {
+  HOTEL = 'Hotel',
+  VILLA = 'Villa',
+  HOMESTAY = 'Homestay',
+  RESORT = 'Resort',
+}
+
+export enum TransportCategory {
+  CAR_RENTAL = 'Car Rental',
+  AIRPORT_TRANSFER = 'Airport Transfer',
+  MOTORBIKE = 'Motorbike',
+}
+
+export interface FlashSaleCampaign {
+  id: number;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  minDiscount: number;
+  adminFeePercentage: number;
+  image: string;
+  isActive: boolean;
+}
+
+export interface FlashSaleDetails {
+  salePrice: number;
+  originalPrice: number;
+  discountPercentage: number;
+  status: 'pending' | 'approved' | 'rejected' | 'ended';
+  endTime?: string;
+  requestDate: string;
+  campaignId?: number;
+}
+
+export interface ItineraryDay {
+  day: number;
+  title: string;
+  description: string;
+  meals?: string[];
+  accommodation?: string;
+}
+
 export interface Review {
   id: number;
   userId: number;
@@ -163,22 +174,20 @@ export interface Review {
   date: string;
 }
 
-// Data Models based on ERD
 export interface User {
   id: number;
   name: string;
   email: string;
   role: UserRole;
   avatar?: string;
-  balance?: number; // For agents (commission)
+  balance?: number;
 
-  // Verification Fields (disesuaikan dengan API sekarang)
-  verificationStatus?: VerificationStatus; // mapping dari verification_status
-  agentType?: AgentType | null; // opsional
+  verificationStatus?: VerificationStatus;
+  agentType?: AgentType | null;
   specialization?: AgentSpecialization | null;
   documents?: {
-    idCard?: string; // KTP/Passport
-    taxId?: string; // NPWP
+    idCard?: string;
+    taxId?: string;
     companyDeed?: string;
   };
   bankDetails?: {
@@ -198,8 +207,8 @@ export interface Category {
 
 export interface Product {
   id: number;
-  ownerId: number; // Added to link product to agent
-  ownerName?: string; // Denormalized for Admin UI
+  ownerId: number;
+  ownerName?: string;
   categoryId: number;
   name: string;
   description: string;
@@ -208,26 +217,24 @@ export interface Product {
   location: string;
   rating: number;
   image: string;
-  images?: string[]; // Added for gallery
+  images?: string[];
   features: string[];
-  details?: ProductDetails; // Flexible details field
-  reviews?: Review[]; // Added for review system
+  details?: ProductDetails;
+  reviews?: Review[];
 
-  // Availability Management
   dailyCapacity?: number;
-  blockedDates?: string[]; // ISO date strings 'YYYY-MM-DD'
+  blockedDates?: string[];
   isActive?: boolean;
 
-  // Flash Sale
   flashSale?: FlashSaleDetails;
 }
 
 export interface Booking {
   id: number;
   userId: number;
-  userName?: string; // Added for Admin display
+  userName?: string;
   productId: number;
-  productName: string; // Denormalized for display
+  productName: string;
   productImage: string;
   quantity: number;
   totalPrice: number;
@@ -235,7 +242,6 @@ export interface Booking {
   date: string;
   createdAt: string;
   contactDetails?: {
-    // Added for "Book for others" feature
     name: string;
     email: string;
     phone: string;
@@ -257,3 +263,121 @@ export interface PayoutRequest {
   status: PayoutStatus;
   date: string;
 }
+
+export type VerificationStatusUser = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+export type AgentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface AgentVerification {
+  id: number;
+  user_id: number;
+
+  agent_type: AgentType;
+  id_card_number: string;
+  tax_id: string;
+
+  company_name: string | null;
+
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_holder: string;
+
+  specialization: AgentSpecialization;
+
+  id_document_url: string | null;
+
+  status: AgentVerificationStatus;
+
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentListItem {
+  id: number;
+  name: string;
+  email: string;
+  role: 'AGENT';
+  avatar: string | null;
+  verification_status: VerificationStatusUser;
+  specialization: AgentSpecialization | null;
+  verification: AgentVerification | null;
+}
+
+export interface AgentProduct {
+  id: number;
+  owner_id: number;
+  category_id: number;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  location: string;
+  image: string;
+  images: string[];
+  features: string[];
+  details?: ProductDetails;
+  daily_capacity?: number;
+  blocked_dates?: string[];
+  rating?: number;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+export type RawAgentProduct = {
+  id: number;
+  owner_id: number;
+  category_id: number;
+  name: string;
+  description: string;
+  price: number | string;
+  currency: string;
+  location: string;
+  image?: string;
+  image_url?: string;
+  images?: string[];
+  features?: string[];
+  details?: any;
+  daily_capacity?: number;
+  rating?: number | string;
+  is_active?: boolean | number;
+  created_at?: string;
+};
+
+export type CustomerListItem = {
+  id: number;
+  name: string;
+  email: string;
+  role: 'CUSTOMER';
+  avatar: string | null;
+};
+
+// PAYLOAD
+
+export interface AgentProductPayload {
+  category_id: number;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  location: string;
+  image: string;
+  images: string[];
+  features: string[];
+  details?: ProductDetails;
+  daily_capacity?: number;
+  blocked_dates?: string[];
+}
+
+// RESPONSE
+
+export interface ApiResponse<T> {
+  status: number;
+  error: boolean;
+  message: string;
+  data: T;
+}
+
+export type AgentListResponse = ApiResponse<AgentListItem[]>;
