@@ -1,7 +1,12 @@
-// src/AuthContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { authService } from './services/authService';
-import { AgentSpecialization, AuthUser, UserRole } from './types';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { authService } from "./services/authService";
+import { AgentSpecialization, AuthUser, UserRole } from "./types";
 
 type LoginResult = {
   success: boolean;
@@ -30,14 +35,17 @@ function normalize_user(api_user: any): AuthUser {
     avatar: api_user.avatar ?? null,
     email: api_user.email,
     role: api_user.role as UserRole,
-    specialization: (api_user.specialization ?? null) as AgentSpecialization | null,
+    specialization: (api_user.specialization ??
+      null) as AgentSpecialization | null,
     verification_status,
   };
 }
 
-const CACHE_KEY = 'trivgoo_user_cache';
+const CACHE_KEY = "trivgoo_user_cache";
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, set_user] = useState<AuthUser | null>(null);
   const [is_loading, set_is_loading] = useState(true);
 
@@ -49,16 +57,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refresh_me = async () => {
     try {
-      const api_user = await authService.me(); // <- satu pintu
+      const api_user = await authService.me();
       persist_user(normalize_user(api_user));
     } catch (e) {
-      // 401 / session expired -> logout local
       persist_user(null);
     }
   };
 
   useEffect(() => {
-    // optional: hydrate dari cache biar UI gak kosong
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) set_user(JSON.parse(cached));
@@ -70,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await refresh_me();
       set_is_loading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update_user = (partial: Partial<AuthUser>) => {
@@ -82,23 +87,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const login = async (email: string, password: string): Promise<LoginResult> => {
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<LoginResult> => {
     try {
-      const api_user = await authService.login({ email, password }); // <- satu pintu
+      const api_user = await authService.login({ email, password });
       const u = normalize_user(api_user);
       persist_user(u);
       return { success: true, user: u };
     } catch (e: any) {
-      return { success: false, message: e?.message || 'Login failed' };
+      return { success: false, message: e?.message || "Login failed" };
     }
   };
 
   const logout = async () => {
     try {
-      await authService.logout(); // <- satu pintu
+      await authService.logout();
     } catch (e) {
-      // ignore network error, tetap clear local
-      console.error('[AUTH] logout error:', e);
+      console.error("[AUTH] logout error:", e);
     } finally {
       persist_user(null);
     }
@@ -114,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshMe: refresh_me,
       updateUser: update_user,
     }),
-    [user, is_loading],
+    [user, is_loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -122,6 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 };
