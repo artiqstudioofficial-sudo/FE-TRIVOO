@@ -1,27 +1,28 @@
-// src/services/http.ts
-import { ApiEnvelope } from '@/types';
-import axios from 'axios';
+import { ApiEnvelope } from "@/types";
+import axios from "axios";
 
 const http = axios.create({
-  baseURL: 'http://localhost:4000/api/v1',
-  withCredentials: true, // ✅ session cookie
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: "http://localhost:4000/api/v1",
+  withCredentials: true,
+  headers: { Accept: "application/json" }, // ✅ no default Content-Type
 });
 
-// ✅ error normalization (tanpa unwrap)
-http.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    const msg = err?.response?.data?.message || err?.message || 'Network error';
+http.interceptors.request.use((config) => {
+  const isFormData = config.data instanceof FormData;
 
-    return Promise.reject(new Error(msg));
-  },
-);
+  if (isFormData) {
+    // ✅ penting: biarkan axios set boundary
+    if (config.headers) delete (config.headers as any)["Content-Type"];
+  } else {
+    (config.headers as any)["Content-Type"] = "application/json";
+  }
+  return config;
+});
 
 export default http;
 
 // helper unwrap envelope (lebih clean daripada nulis berulang2)
 export function unwrap<T>(envelope: ApiEnvelope<T>): T {
-  if (envelope.error) throw new Error(envelope.message || 'Request failed');
+  if (envelope.error) throw new Error(envelope.message || "Request failed");
   return envelope.data;
 }

@@ -1,7 +1,7 @@
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  AGENT = 'AGENT',
-  CUSTOMER = 'CUSTOMER',
+  ADMIN = "ADMIN",
+  AGENT = "AGENT",
+  CUSTOMER = "CUSTOMER",
 }
 
 export type AuthUser = {
@@ -14,12 +14,27 @@ export type AuthUser = {
   verification_status?: VerificationStatus;
 };
 
+export type UploadedMediaItem = {
+  path: string;
+  url: string;
+  file_name?: string;
+  stored_name?: string;
+  mime?: string;
+  size?: number;
+};
+
+export type UploadMediaResponse = {
+  path: string;
+  url: string;
+  items: UploadedMediaItem[];
+};
+
 export interface TourDetails {
-  type: 'tour';
+  type: "tour";
   tourCategory: TourCategory; // Added
   duration: string;
   groupSize: string;
-  difficulty: 'Easy' | 'Moderate' | 'Hard'; // Added
+  difficulty: "Easy" | "Moderate" | "Hard"; // Added
   ageRestriction?: string; // Added
   meetingPoint: string; // Added
   itinerary: ItineraryDay[];
@@ -28,7 +43,7 @@ export interface TourDetails {
 }
 
 export interface StayDetails {
-  type: 'stay';
+  type: "stay";
   stayCategory: StayCategory; // Added
   checkIn: string;
   checkOut: string;
@@ -42,9 +57,9 @@ export interface StayDetails {
 }
 
 export interface CarDetails {
-  type: 'car';
+  type: "car";
   transportCategory: TransportCategory; // Added
-  transmission: 'Automatic' | 'Manual';
+  transmission: "Automatic" | "Manual";
   seats: number;
   luggage: number;
   fuelPolicy: string;
@@ -65,7 +80,7 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
-  role?: 'CUSTOMER' | 'AGENT' | 'ADMIN';
+  role?: "CUSTOMER" | "AGENT" | "ADMIN";
   specialization?: string;
 }
 
@@ -77,61 +92,61 @@ export type ApiEnvelope<T> = {
 };
 
 export enum BookingStatus {
-  PENDING = 'pending',
-  CONFIRMED = 'confirmed',
-  CANCELLED = 'cancelled',
-  COMPLETED = 'completed',
+  PENDING = "pending",
+  CONFIRMED = "confirmed",
+  CANCELLED = "cancelled",
+  COMPLETED = "completed",
 }
 
 export enum PaymentStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  FAILED = 'failed',
+  PENDING = "pending",
+  PAID = "paid",
+  FAILED = "failed",
 }
 
 export enum PayoutStatus {
-  PENDING = 'pending',
-  PROCESSED = 'processed',
-  REJECTED = 'rejected',
+  PENDING = "pending",
+  PROCESSED = "processed",
+  REJECTED = "rejected",
 }
 
 export enum VerificationStatus {
-  UNVERIFIED = 'UNVERIFIED',
-  PENDING = 'PENDING',
-  VERIFIED = 'VERIFIED',
-  REJECTED = 'REJECTED',
+  UNVERIFIED = "UNVERIFIED",
+  PENDING = "PENDING",
+  VERIFIED = "VERIFIED",
+  REJECTED = "REJECTED",
 }
 
 export enum AgentType {
-  INDIVIDUAL = 'INDIVIDUAL',
-  CORPORATE = 'CORPORATE',
+  INDIVIDUAL = "INDIVIDUAL",
+  CORPORATE = "CORPORATE",
 }
 
 export enum AgentSpecialization {
-  TOUR = 'TOUR',
-  STAY = 'STAY',
-  TRANSPORT = 'TRANSPORT',
+  TOUR = "TOUR",
+  STAY = "STAY",
+  TRANSPORT = "TRANSPORT",
 }
 
 export enum TourCategory {
-  NATURE = 'Nature',
-  ADVENTURE = 'Adventure',
-  SPIRITUAL = 'Spiritual',
-  CULTURAL = 'Cultural',
-  CULINARY = 'Culinary',
+  NATURE = "Nature",
+  ADVENTURE = "Adventure",
+  SPIRITUAL = "Spiritual",
+  CULTURAL = "Cultural",
+  CULINARY = "Culinary",
 }
 
 export enum StayCategory {
-  HOTEL = 'Hotel',
-  VILLA = 'Villa',
-  HOMESTAY = 'Homestay',
-  RESORT = 'Resort',
+  HOTEL = "Hotel",
+  VILLA = "Villa",
+  HOMESTAY = "Homestay",
+  RESORT = "Resort",
 }
 
 export enum TransportCategory {
-  CAR_RENTAL = 'Car Rental',
-  AIRPORT_TRANSFER = 'Airport Transfer',
-  MOTORBIKE = 'Motorbike',
+  CAR_RENTAL = "Car Rental",
+  AIRPORT_TRANSFER = "Airport Transfer",
+  MOTORBIKE = "Motorbike",
 }
 
 export interface FlashSaleCampaign {
@@ -150,7 +165,7 @@ export interface FlashSaleDetails {
   salePrice: number;
   originalPrice: number;
   discountPercentage: number;
-  status: 'pending' | 'approved' | 'rejected' | 'ended';
+  status: "pending" | "approved" | "rejected" | "ended";
   endTime?: string;
   requestDate: string;
   campaignId?: number;
@@ -264,8 +279,12 @@ export interface PayoutRequest {
   date: string;
 }
 
-export type VerificationStatusUser = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
-export type AgentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type VerificationStatusUser =
+  | "UNVERIFIED"
+  | "PENDING"
+  | "VERIFIED"
+  | "REJECTED";
+export type AgentVerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface AgentVerification {
   id: number;
@@ -299,7 +318,7 @@ export interface AgentListItem {
   id: number;
   name: string;
   email: string;
-  role: 'AGENT';
+  role: "AGENT";
   avatar: string | null;
   verification_status: VerificationStatusUser;
   specialization: AgentSpecialization | null;
@@ -350,7 +369,7 @@ export type CustomerListItem = {
   id: number;
   name: string;
   email: string;
-  role: 'CUSTOMER';
+  role: "CUSTOMER";
   avatar: string | null;
 };
 
@@ -363,7 +382,7 @@ export interface AgentProductPayload {
   price: number;
   currency: string;
   location: string;
-  image: string;
+  image_url: string;
   images: string[];
   features: string[];
   details?: ProductDetails;
