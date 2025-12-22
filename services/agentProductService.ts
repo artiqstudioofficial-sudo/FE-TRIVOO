@@ -1,91 +1,59 @@
-import { ProductDetails } from '../types';
+import type { AgentProduct, AgentProductPayload, ApiEnvelope, RawAgentProduct } from '../types';
+import http, { unwrap } from './http';
 
-const API_BASE = 'http://localhost:4000/api/v1';
+type ProductEnvelope<T> = ApiEnvelope<T>;
 
-export interface AgentProduct {
-  id: number;
-  ownerId: number;
-  categoryId: number;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  location: string;
-  image: string;
-  images: string[];
-  features: string[];
-  details?: ProductDetails;
-  dailyCapacity?: number;
-  blockedDates?: string[];
+const DEFAULT_IMAGE =
+  'https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=800&q=80';
+
+function normalizeProduct(data: RawAgentProduct): AgentProduct {
+  return {
+    id: data.id,
+    owner_id: data.owner_id,
+    category_id: data.category_id,
+    name: data.name,
+    description: data.description,
+    price: Number(data.price),
+    currency: data.currency,
+    location: data.location,
+    image: data.image_url || data.image || DEFAULT_IMAGE,
+    images: Array.isArray(data.images) ? data.images : [],
+    features: Array.isArray(data.features) ? data.features : [],
+    details: data.details ?? undefined,
+    daily_capacity: data.daily_capacity ?? 10,
+    rating: data.rating ? Number(data.rating) : 0,
+    is_active: !!data.is_active,
+    created_at: data.created_at,
+  };
 }
 
-export interface AgentProductPayload {
-  categoryId: number;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  location: string;
-  image: string;
-  images: string[];
-  features: string[];
-  details?: ProductDetails;
-  dailyCapacity?: number;
-  blockedDates?: string[];
-}
-
-interface ApiResponse<T> {
-  status: number;
-  error: boolean;
-  message: string;
-  data: T;
-}
-
-async function authFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('token');
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  const json = (await res.json()) as ApiResponse<T>;
-
-  if (!res.ok || json.error) {
-    throw new Error(json.message || 'Request failed');
-  }
-
-  return json.data;
+async function mapOne<T>(req: Promise<{ data: ProductEnvelope<T> }>): Promise<T> {
+  const res = await req;
+  return unwrap(res.data);
 }
 
 export const agentProductService = {
-  createProduct(payload: AgentProductPayload): Promise<AgentProduct> {
-    return authFetch<AgentProduct>('/agent/products', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+  async createProduct(payload: AgentProductPayload): Promise<AgentProduct> {
+    const raw = await mapOne(
+      http.post<ProductEnvelope<RawAgentProduct>>('/agent/products', payload),
+    );
+    return normalizeProduct(raw);
   },
 
-  updateProduct(id: number, payload: AgentProductPayload): Promise<AgentProduct> {
-    return authFetch<AgentProduct>(`/agent/products/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
+  async updateProduct(id: number, payload: AgentProductPayload): Promise<AgentProduct> {
+    const raw = await mapOne(
+      http.put<ProductEnvelope<RawAgentProduct>>(`/agent/products/${id}`, payload),
+    );
+    return normalizeProduct(raw);
   },
 
-  getMyProduct(id: number): Promise<AgentProduct> {
-    return authFetch<AgentProduct>(`/agent/products/${id}`, {
-      method: 'GET',
-    });
+  async getMyProduct(id: number): Promise<AgentProduct> {
+    const raw = await mapOne(http.get<ProductEnvelope<RawAgentProduct>>(`/agent/products/${id}`));
+    return normalizeProduct(raw);
   },
 
-  getMyProducts(): Promise<AgentProduct[]> {
-    return authFetch<AgentProduct[]>('/agent/products/my', {
-      method: 'GET',
-    });
+  async getMyProducts(): Promise<AgentProduct[]> {
+    const rows = await mapOne(http.get<ProductEnvelope<RawAgentProduct[]>>('/agent/products'));
+    return rows.map(normalizeProduct);
   },
 };

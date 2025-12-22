@@ -1,5 +1,3 @@
-// src/pages/agent/AgentVerification.tsx
-
 import {
   Building2,
   CheckCircle,
@@ -9,7 +7,7 @@ import {
   Upload,
   User,
 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
 import { agentService } from '../../services/agentService';
@@ -37,49 +35,62 @@ const AgentVerification: React.FC = () => {
   const [idDocument, setIdDocument] = useState<File | null>(null);
   const [idDocumentName, setIdDocumentName] = useState<string>('');
 
-  // Redirect if not logged in
+  // ✅ guard anti double-call (React 18 StrictMode dev)
+  const didFetchRef = useRef(false);
+
   useEffect(() => {
     if (!user) navigate('/login');
   }, [user, navigate]);
 
-  // Fetch verification status from verification endpoint (source of truth)
+  // ✅ FIX: jangan pakai dependency [user] karena updateUser bikin user berubah → loop
   useEffect(() => {
-    if (!user) return;
+    const userId = user?.id;
+    if (!userId) return;
+
+    // StrictMode dev bisa memicu mount 2x, cegah terlihat seperti loop
+    if (didFetchRef.current) return;
+    didFetchRef.current = true;
+
+    let cancelled = false;
 
     (async () => {
       try {
         const verification = await agentService.getMyVerification();
 
-        // kalau tidak ada data, anggap UNVERIFIED
-        if (!verification) {
-          updateUser({ verificationStatus: VerificationStatus.UNVERIFIED });
-          return;
-        }
-
+        // fallback kalau null/undefined
         const status =
-          verification?.status ||
-          verification?.verificationStatus ||
-          verification?.verification_status ||
-          VerificationStatus.UNVERIFIED;
+          (verification?.verification_status as VerificationStatus) ?? VerificationStatus.PENDING;
 
-        updateUser({ verificationStatus: status as VerificationStatus });
+        if (cancelled) return;
+
+        // ✅ hanya update kalau berubah (biar tidak memicu re-render loop)
+        if (user?.verification_status !== status) {
+          updateUser({ ...user, verification_status: status });
+        }
       } catch {
-        // 404 / belum submit / dll
-        updateUser({ verificationStatus: VerificationStatus.UNVERIFIED });
+        if (cancelled) return;
+
+        const status = VerificationStatus.PENDING;
+        if (user?.verification_status !== status) {
+          updateUser({ ...user, verification_status: status });
+        }
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
 
-  // Redirect if already verified
+    return () => {
+      cancelled = true;
+    };
+    // ✅ depend cuma user?.id (stabil), bukan user object
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ✅ FIX: depend pada status saja
   useEffect(() => {
-    if (user?.verificationStatus === VerificationStatus.VERIFIED) {
+    if (user?.verification_status === VerificationStatus.VERIFIED) {
       navigate('/agent');
     }
-  }, [user?.verificationStatus, navigate]);
+  }, [user?.verification_status, navigate]);
 
-  // If status is PENDING, show Under Review UI
-  if (user?.verificationStatus === VerificationStatus.PENDING) {
+  if (user?.verification_status === VerificationStatus.PENDING) {
     return (
       <div className="max-w-2xl mx-auto py-20 px-4">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden text-center p-12 animate-in fade-in">
@@ -169,33 +180,27 @@ const AgentVerification: React.FC = () => {
         idDocument,
       });
 
-      // ✅ Step 1: refresh user general info (optional, tapi oke)
-      // catatan: pastikan authService.me() sudah credentials include
       let freshUser: any = null;
       try {
-        freshUser = await authService.me(); // harus return user object, bukan token
-      } catch {
-        // kalau gagal, gak masalah — tetap lanjut update status dari verification endpoint
-      }
+        freshUser = await authService.me();
+      } catch {}
 
-      // ✅ Step 2: refresh verification status (source of truth)
       const verification = await agentService.getMyVerification();
       const vStatus =
-        verification?.status ||
-        verification?.verificationStatus ||
-        verification?.verification_status ||
-        VerificationStatus.PENDING;
+        (verification?.verification_status as VerificationStatus) ?? VerificationStatus.PENDING;
 
-      // ✅ Step 3: merge ke auth context
-      // - kalau freshUser ada, update field user umum
-      // - status verification selalu pakai vStatus
+      // ✅ FIX: pakai key yang benar: verification_status
       if (freshUser) {
+        const mergedUser = freshUser.user ? freshUser.user : freshUser;
         updateUser({
-          ...(freshUser.user ? freshUser.user : freshUser), // jaga-jaga bentuk response
-          verificationStatus: vStatus as VerificationStatus,
+          ...mergedUser,
+          verification_status: vStatus,
         });
       } else {
-        updateUser({ verificationStatus: vStatus as VerificationStatus });
+        updateUser({
+          ...user,
+          verification_status: vStatus,
+        });
       }
     } catch (err: any) {
       console.error(err);

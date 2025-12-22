@@ -29,7 +29,7 @@ import AgentAddProduct from './pages/agent/AddProduct';
 import AgentCommissions from './pages/agent/Commissions';
 import AgentCustomerBookings from './pages/agent/CustomerBookings';
 import AgentDashboard from './pages/agent/Dashboard';
-import AgentProducts from './pages/agent/MyProducts';
+import AgentProducts from './pages/agent/products/MyProducts';
 import AgentVerification from './pages/agent/Verification';
 import CustomerBookings from './pages/customer/Bookings';
 
