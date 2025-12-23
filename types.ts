@@ -189,6 +189,21 @@ export interface Review {
   date: string;
 }
 
+export type LoginResult = {
+  success: boolean;
+  user?: AuthUser;
+  message?: string;
+};
+
+export interface AuthContextValue {
+  user: AuthUser | null;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  logout: () => Promise<void>;
+  refreshMe: () => Promise<void>;
+  updateUser: (partial: Partial<AuthUser>) => void;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -197,7 +212,7 @@ export interface User {
   avatar?: string;
   balance?: number;
 
-  verificationStatus?: VerificationStatus;
+  verification_status?: VerificationStatus;
   agentType?: AgentType | null;
   specialization?: AgentSpecialization | null;
   documents?: {
@@ -344,11 +359,19 @@ export interface AgentListItem {
   verification: AgentVerification | null;
 }
 
-export interface ProductImage {
+export interface AgentProductImage {
   id: number;
   url: string;
-  sort_order: number;
   created_at: string;
+  sort_order: number;
+}
+
+export interface ProductItineraryItem {
+  day: number;
+  meals: string[];
+  title: string;
+  description: string;
+  accommodation: string;
 }
 
 export interface AgentProduct {
@@ -360,36 +383,20 @@ export interface AgentProduct {
   price: number;
   currency: string;
   location: string;
-  image: string;
-  images: string[];
-  features: string[];
-  details?: ProductDetails;
-  daily_capacity?: number;
-  blocked_dates?: string[];
-  rating?: number;
-  is_active?: boolean;
-  created_at?: string;
-}
 
-export type RawAgentProduct = {
-  id: number;
-  owner_id: number;
-  category_id: number;
-  name: string;
-  description: string;
-  price: number | string;
-  currency: string;
-  location: string;
-  image?: string;
-  image_url?: string;
-  images?: string[];
-  features?: string[];
-  details?: any;
-  daily_capacity?: number;
-  rating?: number | string;
-  is_active?: boolean | number;
-  created_at?: string;
-};
+  image: string; // cover
+  images: AgentProductImage[]; // array object
+
+  features: string[];
+  details: ProductDetails;
+  daily_capacity: number;
+  rating: number;
+  is_active: boolean;
+  created_at: string; // "2025-12-23T06:35:56.000Z"
+
+  // kalau endpoint lain kadang ada:
+  blocked_dates?: string[];
+}
 
 export type CustomerListItem = {
   id: number;

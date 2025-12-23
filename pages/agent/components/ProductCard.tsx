@@ -13,11 +13,6 @@ type Props = {
 const FALLBACK =
   'https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=800&q=80';
 
-function safeUrl(u: any): string {
-  if (typeof u === 'string' && u.trim()) return u;
-  return FALLBACK;
-}
-
 const ProductCard: React.FC<Props> = ({
   product,
   onToggleStatus,
@@ -25,18 +20,17 @@ const ProductCard: React.FC<Props> = ({
   onJoinFlashSale,
   onNavigateEdit,
 }) => {
-  const images = useMemo(() => {
-    const arr = Array.isArray((product as any).images) ? (product as any).images : [];
-    // pastikan string[]
-    return arr
-      .map((x: any) => (typeof x === 'string' ? x : x?.url || x?.image_url))
-      .filter(Boolean);
-  }, [product]);
+  // sesuai interface: AgentProductImage[]
+  const images = useMemo(
+    () => (Array.isArray(product.images) ? product.images : []),
+    [product.images],
+  );
 
-  const cover = safeUrl((product as any).image || images[0] || (product as any).image_url);
+  const cover = product.image;
 
+  // thumbs ambil setelah cover biar gak dobel
+  const thumbs = images.slice(1, 5); // max 4 thumbs
   const extraCount = Math.max(0, images.length - 1);
-  const thumbs = images.slice(0, 4); // mini thumbs max 4
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
@@ -76,24 +70,24 @@ const ProductCard: React.FC<Props> = ({
 
             <div className="text-right">
               <div className="text-sm font-extrabold text-gray-900">
-                {product.currency} {Number(product.price).toLocaleString()}
+                {product.currency} {Number(product.price || 0).toLocaleString()}
               </div>
-              {!!(product as any).rating && (
+              {product.rating ? (
                 <div className="text-xs text-gray-500">⭐ {product.rating}</div>
-              )}
+              ) : null}
             </div>
           </div>
 
-          {/* Mini thumbnails (optional) */}
-          {thumbs.length > 1 && (
+          {/* Mini thumbnails */}
+          {thumbs.length > 0 && (
             <div className="mt-3 flex items-center gap-2">
-              {thumbs.map((url, idx) => (
+              {thumbs.map((img, idx) => (
                 <div
-                  key={`${url}-${idx}`}
+                  key={img.id ?? `${img.url}-${idx}`}
                   className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100"
                 >
                   <img
-                    src={safeUrl(url)}
+                    src={img.url}
                     alt={`thumb-${idx}`}
                     className="w-full h-full object-cover"
                     loading="lazy"

@@ -5,9 +5,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../AuthContext';
 import { useToast } from '../../../components/ToastContext';
 
-// ⛔ product tidak pakai mock lagi
-// import { mockService } from '../../../services/mockService';
-
 // ✅ pakai API service
 import { agentProductService } from '../../../services/agentProductService';
 
@@ -44,12 +41,8 @@ const AgentProducts: React.FC = () => {
 
   useEffect(() => {
     if (user) loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // =========================
-  // FETCH DATA
-  // =========================
   const loadData = async () => {
     if (!user) return;
 
@@ -57,7 +50,6 @@ const AgentProducts: React.FC = () => {
       setIsLoading(true);
 
       const [prodData, campaignData] = await Promise.all([
-        // ✅ REAL API
         agentProductService.getMyProducts(),
         mockService.getCampaigns(),
       ]);
@@ -73,11 +65,7 @@ const AgentProducts: React.FC = () => {
     }
   };
 
-  // =========================
-  // ACTIONS
-  // =========================
   const handleToggleStatus = async (id: number) => {
-    // TODO: ganti ke API nanti
     await mockService.toggleProductStatus(id);
     await loadData();
   };
@@ -88,14 +76,10 @@ const AgentProducts: React.FC = () => {
     )
       return;
 
-    // TODO: ganti ke API nanti
     await mockService.deleteProduct(id);
     await loadData();
   };
 
-  // =========================
-  // FLASH SALE
-  // =========================
   const openFlashSaleModal = (product: Product, campaign?: FlashSaleCampaign) => {
     setSelectedProduct(product);
 
@@ -151,7 +135,6 @@ const AgentProducts: React.FC = () => {
 
     const calculatedSalePrice = Math.round(targetProduct.price * (1 - percentage / 100));
 
-    // TODO: ganti ke API nanti
     await mockService.requestFlashSale(targetProduct.id, calculatedSalePrice, selectedCampaign?.id);
 
     showToast('Request submitted successfully!', 'success');
@@ -159,9 +142,6 @@ const AgentProducts: React.FC = () => {
     await loadData();
   };
 
-  // =========================
-  // RENDER
-  // =========================
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-20">
       {/* Active Campaigns */}

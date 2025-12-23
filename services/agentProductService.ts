@@ -95,7 +95,7 @@
 //   },
 // };
 
-import type { AgentProduct, AgentProductPayload, ApiEnvelope, RawAgentProduct } from '../types';
+import type { AgentProduct, AgentProductPayload, ApiEnvelope } from '../types';
 import http, { unwrap } from './http';
 
 type ProductEnvelope<T> = ApiEnvelope<T>;
@@ -141,38 +141,26 @@ function normalizeImages(input: any): string[] {
 
   return [];
 }
-
-function normalizeProduct(data: RawAgentProduct): AgentProduct {
-  // backend bisa kirim images di berbagai field
-  const images =
-    normalizeImages((data as any).images) ||
-    normalizeImages((data as any).product_images) ||
-    normalizeImages((data as any).images_json);
-
-  // cover logic: prefer images[0], fallback image_url, fallback default
-  const cover = images[0] || (data as any).image_url || (data as any).image || DEFAULT_IMAGE;
-
+function normalizeProduct(data: AgentProduct): AgentProduct {
   return {
     id: data.id,
     owner_id: data.owner_id,
     category_id: data.category_id,
     name: data.name,
     description: data.description,
-    price: Number((data as any).price),
-    currency: (data as any).currency,
-    location: (data as any).location,
-
-    image: cover,
-    images,
-
+    price: Number((data as any).price || 0),
+    currency: (data as any).currency || '',
+    location: (data as any).location || '',
+    image: data.image,
+    images: data.images,
     features: Array.isArray((data as any).features) ? (data as any).features : [],
     details: (data as any).details ?? undefined,
     daily_capacity: (data as any).daily_capacity ?? 10,
-    blocked_dates: (data as any).blocked_dates ?? [],
+    blocked_dates: Array.isArray((data as any).blocked_dates) ? (data as any).blocked_dates : [],
     rating: (data as any).rating ? Number((data as any).rating) : 0,
     is_active: !!(data as any).is_active,
     created_at: (data as any).created_at,
-  } as any;
+  };
 }
 
 async function mapOne<T>(req: Promise<{ data: ProductEnvelope<T> }>): Promise<T> {
@@ -199,26 +187,25 @@ function extractUploadedUrls(payload: any): string[] {
 
 export const agentProductService = {
   async createProduct(payload: AgentProductPayload): Promise<AgentProduct> {
-    const raw = await mapOne(
-      http.post<ProductEnvelope<RawAgentProduct>>('/agent/products', payload),
-    );
+    const raw = await mapOne(http.post<ProductEnvelope<AgentProduct>>('/agent/products', payload));
     return normalizeProduct(raw);
   },
 
   async updateProduct(id: number, payload: AgentProductPayload): Promise<AgentProduct> {
+    console.log(payload);
     const raw = await mapOne(
-      http.put<ProductEnvelope<RawAgentProduct>>(`/agent/products/${id}`, payload),
+      http.put<ProductEnvelope<AgentProduct>>(`/agent/products/${id}`, payload),
     );
     return normalizeProduct(raw);
   },
 
   async getMyProduct(id: number): Promise<AgentProduct> {
-    const raw = await mapOne(http.get<ProductEnvelope<RawAgentProduct>>(`/agent/products/${id}`));
+    const raw = await mapOne(http.get<ProductEnvelope<AgentProduct>>(`/agent/products/${id}`));
     return normalizeProduct(raw);
   },
 
   async getMyProducts(): Promise<AgentProduct[]> {
-    const rows = await mapOne(http.get<ProductEnvelope<RawAgentProduct[]>>('/agent/products'));
+    const rows = await mapOne(http.get<ProductEnvelope<AgentProduct[]>>('/agent/products'));
     return rows.map(normalizeProduct);
   },
 
