@@ -199,6 +199,10 @@ export const agentProductService = {
     return normalizeProduct(raw);
   },
 
+  async deleteProduct(id: number): Promise<void> {
+    await mapOne(http.delete<ProductEnvelope<any>>(`/agent/products/${id}/delete`));
+  },
+
   async getMyProduct(id: number): Promise<AgentProduct> {
     const raw = await mapOne(http.get<ProductEnvelope<AgentProduct>>(`/agent/products/${id}`));
     return normalizeProduct(raw);
