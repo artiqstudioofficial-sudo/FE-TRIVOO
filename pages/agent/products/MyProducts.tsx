@@ -81,10 +81,9 @@ const AgentProducts: React.FC = () => {
     setProducts((cur) => cur.filter((p) => p.id !== id));
 
     try {
-      await agentProductService.deleteProduct(id); // ✅ pakai API
+      await agentProductService.deleteProduct(id);
       showToast('Product deleted', 'success');
 
-      // optional: refresh biar data sinkron (misal ada effect lain)
       await loadData();
     } catch (e: any) {
       console.error(e);
